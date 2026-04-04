@@ -131,6 +131,7 @@ graph TD
 | [shared/security.md](shared/security.md)                         | 위협 매트릭스, 대응, 헤더 보안, ACL          |
 | [shared/logging.md](shared/logging.md)                           | Fluent Bit, Loki, Grafana, X-Request-Id 추적 |
 | [shared/service-architecture.md](shared/service-architecture.md) | 헥사고날 아키텍처, 패키지 구조, 레이어 규칙  |
+| [shared/project-structure.md](shared/project-structure.md)       | 모노레포 구조, 빌드, 배포, 로컬 개발 환경    |
 
 ### ADR
 
