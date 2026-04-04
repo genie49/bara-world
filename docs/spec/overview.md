@@ -121,18 +121,19 @@ graph TD
 
 ### 공통 문서
 
-| 문서                                                 | 내용                                         |
-| ---------------------------------------------------- | -------------------------------------------- |
-| [shared/infrastructure.md](shared/infrastructure.md) | VM, K3s, Cloudflare, 도메인, Pod 구성        |
-| [shared/messaging.md](shared/messaging.md)           | Kafka 기반 통신, 토픽 설계, OAUTHBEARER, SSE |
-| [shared/security.md](shared/security.md)             | 위협 매트릭스, 대응, 헤더 보안, ACL          |
-| [shared/logging.md](shared/logging.md)               | Fluent Bit, Loki, Grafana, X-Request-Id 추적 |
+| 문서                                                             | 내용                                         |
+| ---------------------------------------------------------------- | -------------------------------------------- |
+| [shared/infrastructure.md](shared/infrastructure.md)             | VM, K3s, Cloudflare, 도메인, Pod 구성        |
+| [shared/messaging.md](shared/messaging.md)                       | Kafka 기반 통신, 토픽 설계, OAUTHBEARER, SSE |
+| [shared/security.md](shared/security.md)                         | 위협 매트릭스, 대응, 헤더 보안, ACL          |
+| [shared/logging.md](shared/logging.md)                           | Fluent Bit, Loki, Grafana, X-Request-Id 추적 |
+| [shared/service-architecture.md](shared/service-architecture.md) | 헥사고날 아키텍처, 패키지 구조, 레이어 규칙  |
 
 ### ADR
 
 | 문서                     | 내용                                              |
 | ------------------------ | ------------------------------------------------- |
-| [decisions/](decisions/) | Architecture Decision Records (ADR-001 ~ ADR-011) |
+| [decisions/](decisions/) | Architecture Decision Records (ADR-001 ~ ADR-012) |
 
 ### ADR 목록
 
@@ -149,3 +150,4 @@ graph TD
 | [009](decisions/adr-009-path-based-routing.md)          | 서브도메인 대신 경로 기반 라우팅        |
 | [010](decisions/adr-010-oci-free-tier.md)               | OCI 무료 티어 VM + K3s                  |
 | [011](decisions/adr-011-shared-sdk.md)                  | 별도 중계 서비스 대신 공용 SDK          |
+| [012](decisions/adr-012-hexagonal-architecture.md)      | 서비스 아키텍처로 헥사고날 채택         |
