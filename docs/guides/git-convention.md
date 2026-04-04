@@ -97,6 +97,30 @@ git checkout -b feat/api/AgentReg     # 대문자 불가
 
 `main`과 `develop`에는 **직접 push할 수 없습니다**. PR을 통해 머지하세요.
 
+## Pull Request
+
+### 제목
+
+커밋 컨벤션과 동일한 형식을 사용합니다: `type(scope): subject`
+
+```bash
+# 올바른 예시
+feat(api): Agent 등록 엔드포인트 추가
+fix(auth): JWT 토큰 갱신 로직 수정
+
+# 잘못된 예시
+Agent 등록 기능 추가          # 타입/scope 없음
+```
+
+### 본문
+
+`.github/PULL_REQUEST_TEMPLATE.md` 템플릿이 자동 적용됩니다.
+요약, 변경 사항, 체크리스트, 기타 섹션을 작성해주세요.
+
+### 머지 전략
+
+**Merge Commit**을 사용합니다. 브랜치별 커밋 히스토리가 유지됩니다.
+
 ## 설정
 
 프로젝트를 클론한 후 `npm install`을 실행하면 Husky가 자동으로 Git hooks를 설정합니다.
