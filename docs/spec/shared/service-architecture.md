@@ -10,6 +10,7 @@
 2. **Domain은 프레임워크를 모른다** — Spring, MongoDB, Kafka 의존성 없음
 3. **외부와의 통신은 반드시 Port를 거친다**
 4. **모든 기능에 동일한 패턴** — 단순/복잡 구분 없이 통일
+5. **Command/Query 분리** — 쓰기와 읽기의 책임을 포트/서비스 수준에서 분리 (경량 CQRS)
 
 ## 패키지 구조
 
@@ -20,9 +21,13 @@ com.bara.{service}
 │   └── exception/             #   도메인 예외
 ├── application/               # 유스케이스 (비즈니스 흐름 조율)
 │   ├── port/
-│   │   ├── in/                #   인바운드 포트 (UseCase 인터페이스)
+│   │   ├── in/
+│   │   │   ├── command/       #   쓰기 포트 (Command UseCase)
+│   │   │   └── query/         #   읽기 포트 (Query UseCase)
 │   │   └── out/               #   아웃바운드 포트 (Repository, 외부 시스템)
-│   └── service/               #   유스케이스 구현체
+│   └── service/
+│       ├── command/           #   쓰기 유스케이스 구현체
+│       └── query/             #   읽기 유스케이스 구현체
 ├── adapter/                   # 외부 기술 연결
 │   ├── in/                    #   인바운드 어댑터
 │   │   ├── rest/              #     REST Controller
@@ -66,9 +71,14 @@ data class Agent(
 - **아웃바운드 포트**: 이 서비스가 외부에 요청해야 하는 기능을 정의
 - **Service**: 인바운드 포트를 구현하며, 아웃바운드 포트를 호출하여 비즈니스 흐름을 조율
 - 포트 이름은 **기술이 아니라 의도**로 작성: `SaveAgentPort`(O), `MongoAgentRepository`(X)
+- **Command/Query 분리**: 인바운드 포트와 서비스를 `command/`(쓰기)와 `query/`(읽기)로 나눈다
+
+#### Command (쓰기)
+
+상태를 변경하는 기능. 검증, 생성, 수정, 삭제 등.
 
 ```kotlin
-// application/port/in/RegisterAgentUseCase.kt
+// application/port/in/command/RegisterAgentUseCase.kt
 interface RegisterAgentUseCase {
     fun register(command: RegisterAgentCommand): Agent
 }
@@ -78,30 +88,75 @@ interface SaveAgentPort {
     fun save(agent: Agent): Agent
 }
 
-// application/port/out/CreateKafkaAccountPort.kt
-interface CreateKafkaAccountPort {
-    fun create(agentId: AgentId): KafkaCredentials
-}
-
-// application/service/RegisterAgentService.kt
+// application/service/command/RegisterAgentService.kt
 @Service
 class RegisterAgentService(
     private val saveAgent: SaveAgentPort,
     private val createKafkaAccount: CreateKafkaAccountPort,
-    private val registerHeartbeat: RegisterHeartbeatPort,
     private val verifyAgentCard: VerifyAgentCardPort,
 ) : RegisterAgentUseCase {
 
     override fun register(command: RegisterAgentCommand): Agent {
-        verifyAgentCard.verify(command.endpoint)
+        verifyAgentCard.verify(command.agentCard)
         val agent = Agent.create(command)
         saveAgent.save(agent)
-        registerHeartbeat.register(agent.id)
         val credentials = createKafkaAccount.create(agent.id)
         return agent.withCredentials(credentials)
     }
 }
 ```
+
+#### Query (읽기)
+
+상태를 변경하지 않는 조회 기능.
+
+```kotlin
+// application/port/in/query/GetAgentQuery.kt
+interface GetAgentQuery {
+    fun getById(id: AgentId): Agent
+}
+
+// application/port/in/query/ListAgentsQuery.kt
+interface ListAgentsQuery {
+    fun listActive(): List<Agent>
+}
+
+// application/port/out/LoadAgentPort.kt
+interface LoadAgentPort {
+    fun loadById(id: AgentId): Agent?
+    fun loadAll(): List<Agent>
+}
+
+// application/service/query/AgentQueryService.kt
+@Service
+class AgentQueryService(
+    private val loadAgent: LoadAgentPort,
+    private val checkHeartbeat: CheckHeartbeatPort,
+) : GetAgentQuery, ListAgentsQuery {
+
+    override fun getById(id: AgentId): Agent {
+        return loadAgent.loadById(id)
+            ?: throw AgentNotFoundException(id)
+    }
+
+    override fun listActive(): List<Agent> {
+        return loadAgent.loadAll()
+            .filter { checkHeartbeat.isAlive(it.id) }
+    }
+}
+```
+
+#### Command/Query 분리 기준
+
+| 구분            | Command                        | Query                        |
+| --------------- | ------------------------------ | ---------------------------- |
+| 상태 변경       | O                              | X                            |
+| 포트 위치       | `port/in/command/`             | `port/in/query/`             |
+| 서비스 위치     | `service/command/`             | `service/query/`             |
+| 아웃바운드 포트 | `SaveXxxPort`, `DeleteXxxPort` | `LoadXxxPort`, `FindXxxPort` |
+| 네이밍          | `XxxUseCase`                   | `XxxQuery`                   |
+
+> 이 프로젝트에서는 별도 읽기 DB나 Event Sourcing 없이, **포트/서비스 패키지 분리 수준의 경량 CQRS**를 적용한다. 읽기/쓰기가 같은 MongoDB를 사용하되, 코드 수준에서 책임을 명확히 나눈다.
 
 ### Adapter
 
@@ -115,8 +170,9 @@ class RegisterAgentService(
 @RestController
 @RequestMapping("/agents")
 class AgentController(
-    private val registerAgent: RegisterAgentUseCase,
-    private val getAgent: GetAgentUseCase,
+    private val registerAgent: RegisterAgentUseCase,   // Command
+    private val getAgent: GetAgentQuery,                // Query
+    private val listAgents: ListAgentsQuery,            // Query
 ) {
     @PostMapping
     fun register(@RequestBody req: RegisterAgentRequest): AgentResponse {
@@ -128,6 +184,11 @@ class AgentController(
     fun getById(@PathVariable id: String): AgentResponse {
         val agent = getAgent.getById(AgentId(id))
         return AgentResponse.from(agent)
+    }
+
+    @GetMapping
+    fun listActive(): List<AgentResponse> {
+        return listAgents.listActive().map { AgentResponse.from(it) }
     }
 }
 
