@@ -2,26 +2,26 @@
 
 ## 위협 매트릭스
 
-| 위협 | 심각도 | 대응 |
-|------|--------|------|
-| 패킷 스니핑 | 높음 | 전 구간 TLS 강제 (내부 mTLS는 후순위) |
-| MITM (중간자 공격) | 높음 | TLS, Agent Card 서명 (mTLS는 후순위) |
-| JWT 위조 | 높음 | RS256, 알고리즘 고정 |
-| 토큰 탈취/재사용 | 높음 | 짧은 만료, JTI 1회용 |
-| X-User-Id 스푸핑 | 높음 | Nginx 헤더 제거 후 덮어씌움 |
-| Agent Card 스푸핑 | 높음 | 서명 검증, 등록 인증 |
-| Redis 직접 접근 | 높음 | bind 제한, TLS, AUTH |
-| Agent 서버 직접 접근 | 높음 | Cloudflare IP만 허용, 내부 시크릿 헤더 |
-| Provider 토큰 탈취 | 높음 | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
-| Kafka 토픽 무단 접근 | 높음 | SASL + ACL |
-| Kafka 메시지 위변조 | 높음 | TLS + 메시지 서명 |
-| Webhook SSRF | 높음 | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지 |
-| 스케줄 남용 | 높음 | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증 |
-| 미허가 Agent 호출 | 높음 | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증 |
-| 권한 상승 | 중간 | 토큰 서명, 권한 검증 |
-| Task Replay | 중간 | JTI, Idempotency Key |
-| DDoS | 중간 | Cloudflare, Rate Limiting, 캐싱 |
-| Kafka 토픽 폭주 | 중간 | Provider별 Rate Limit |
+| 위협                 | 심각도 | 대응                                                       |
+| -------------------- | ------ | ---------------------------------------------------------- |
+| 패킷 스니핑          | 높음   | 전 구간 TLS 강제 (내부 mTLS는 후순위)                      |
+| MITM (중간자 공격)   | 높음   | TLS, Agent Card 서명 (mTLS는 후순위)                       |
+| JWT 위조             | 높음   | RS256, 알고리즘 고정                                       |
+| 토큰 탈취/재사용     | 높음   | 짧은 만료, JTI 1회용                                       |
+| X-User-Id 스푸핑     | 높음   | Nginx 헤더 제거 후 덮어씌움                                |
+| Agent Card 스푸핑    | 높음   | 서명 검증, 등록 인증                                       |
+| Redis 직접 접근      | 높음   | bind 제한, TLS, AUTH                                       |
+| Agent 서버 직접 접근 | 높음   | Cloudflare IP만 허용, 내부 시크릿 헤더                     |
+| Provider 토큰 탈취   | 높음   | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
+| Kafka 토픽 무단 접근 | 높음   | SASL + ACL                                                 |
+| Kafka 메시지 위변조  | 높음   | TLS + 메시지 서명                                          |
+| Webhook SSRF         | 높음   | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지 |
+| 스케줄 남용          | 높음   | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증       |
+| 미허가 Agent 호출    | 높음   | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증 |
+| 권한 상승            | 중간   | 토큰 서명, 권한 검증                                       |
+| Task Replay          | 중간   | JTI, Idempotency Key                                       |
+| DDoS                 | 중간   | Cloudflare, Rate Limiting, 캐싱                            |
+| Kafka 토픽 폭주      | 중간   | Provider별 Rate Limit                                      |
 
 ## 네트워크 레이어
 
@@ -72,6 +72,8 @@
 Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후** Auth Service 검증 결과로 덮어씌운다.
 
 초기화 대상: `X-User-Id`, `X-User-Role`, `X-Agent-Id`, `X-Provider-Id`, `X-Gateway`
+
+> 헤더 주입 흐름 상세는 [인증 문서](../auth/authentication.md#nginx-헤더-주입) 참고.
 
 ### Agent Card 스푸핑 방지
 

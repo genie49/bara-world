@@ -22,7 +22,7 @@ npm install    # Husky Git hooks 자동 설정 (prepare 스크립트)
 
 ## Architecture
 
-상세 설계: `docs/spec/` (00-overview ~ 08-scheduler, ADR 11개)
+상세 설계: `docs/spec/overview.md` (서비스별 폴더 구조, ADR 11개)
 
 핵심 구성:
 
@@ -36,5 +36,5 @@ npm install    # Husky Git hooks 자동 설정 (prepare 스크립트)
 
 ## Documentation
 
-- `docs/spec/` — 시스템 설계 문서 및 ADR
+- `docs/spec/` — 시스템 설계 문서 (서비스별: auth/, api/, scheduler/, clients/ | 공통: shared/ | ADR: decisions/)
 - `docs/guides/` — 개발자 가이드 (git-convention.md 등)

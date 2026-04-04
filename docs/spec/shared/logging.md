@@ -2,15 +2,15 @@
 
 ## 로그 발생 지점
 
-| 서비스 | 주요 로그 |
-|--------|----------|
-| Nginx | 접근 로그, 인증 실패 |
-| Auth Service | 로그인, 토큰 발급/검증 실패 |
-| API Service | Agent 등록/조회, 태스크 요청 수신 |
-| FE Server | 웹 인터페이스 접근, 연동 요청 |
-| Telegram Service | Webhook 수신, 메시지 송수신 |
-| Agent 서버 | 태스크 실행, Agent 간 호출 |
-| Redis | 연결 오류, 키 만료 |
+| 서비스           | 주요 로그                         |
+| ---------------- | --------------------------------- |
+| Nginx            | 접근 로그, 인증 실패              |
+| Auth Service     | 로그인, 토큰 발급/검증 실패       |
+| API Service      | Agent 등록/조회, 태스크 요청 수신 |
+| FE Server        | 웹 인터페이스 접근, 연동 요청     |
+| Telegram Service | Webhook 수신, 메시지 송수신       |
+| Agent 서버       | 태스크 실행, Agent 간 호출        |
+| Redis            | 연결 오류, 키 만료                |
 
 ## Correlation ID (X-Request-Id)
 
@@ -50,18 +50,18 @@ sequenceDiagram
 
 ### 필드
 
-| 필드 | 설명 | 필수 |
-|------|------|------|
-| timestamp | ISO 8601 형식 | O |
-| level | INFO, WARN, ERROR 등 | O |
-| service | 서비스 이름 (auth, api-service, agent-a 등) | O |
-| request_id | X-Request-Id | O |
-| user_id | 요청 사용자 | 가능한 경우 |
-| agent_id | 관련 Agent | 가능한 경우 |
-| action | 수행 동작 (task.execute, token.validate 등) | O |
-| target_agent | 호출 대상 Agent | 가능한 경우 |
-| duration_ms | 처리 소요 시간 | 가능한 경우 |
-| status | success, failure | O |
+| 필드         | 설명                                        | 필수        |
+| ------------ | ------------------------------------------- | ----------- |
+| timestamp    | ISO 8601 형식                               | O           |
+| level        | INFO, WARN, ERROR 등                        | O           |
+| service      | 서비스 이름 (auth, api-service, agent-a 등) | O           |
+| request_id   | X-Request-Id                                | O           |
+| user_id      | 요청 사용자                                 | 가능한 경우 |
+| agent_id     | 관련 Agent                                  | 가능한 경우 |
+| action       | 수행 동작 (task.execute, token.validate 등) | O           |
+| target_agent | 호출 대상 Agent                             | 가능한 경우 |
+| duration_ms  | 처리 소요 시간                              | 가능한 경우 |
+| status       | success, failure                            | O           |
 
 ## 수집 파이프라인
 
@@ -95,11 +95,11 @@ graph TD
 
 ### 접근 제한
 
-| 방법 | 설명 |
-|------|------|
+| 방법              | 설명                                     |
+| ----------------- | ---------------------------------------- |
 | Cloudflare Access | Google 계정 인증 후에만 접근 (무료 50명) |
-| IP 화이트리스트 | Nginx에서 특정 IP만 허용 |
-| VPN | 가장 안전, 운영 부담 있음 |
+| IP 화이트리스트   | Nginx에서 특정 IP만 허용                 |
+| VPN               | 가장 안전, 운영 부담 있음                |
 
 초기에는 Cloudflare Access 또는 IP 화이트리스트 추천.
 
@@ -115,18 +115,18 @@ graph TD
 
 ### 보안 알람
 
-| 조건 | 대응 |
-|------|------|
+| 조건                                 | 대응      |
+| ------------------------------------ | --------- |
 | 동일 IP에서 인증 실패 5회 이상 / 1분 | 즉시 알림 |
-| 존재하지 않는 Agent ID로 접근 | 즉시 알림 |
+| 존재하지 않는 Agent ID로 접근        | 즉시 알림 |
 | X-Internal-Token 없이 직접 접근 시도 | 즉시 알림 |
 
 ### 운영 알람
 
-| 조건 | 대응 |
-|------|------|
-| Agent TTL 만료 (서버 다운) | 알림 |
-| Auth Service 응답 지연 > 500ms | 경고 |
+| 조건                              | 대응 |
+| --------------------------------- | ---- |
+| Agent TTL 만료 (서버 다운)        | 알림 |
+| Auth Service 응답 지연 > 500ms    | 경고 |
 | Agent 체인 전체 duration > 임계값 | 경고 |
 
 ### 알림 채널
@@ -135,8 +135,8 @@ Slack, Email, Webhook 등 Grafana에서 지원하는 채널로 발송.
 
 ## 로그 보존 정책
 
-| 분류 | 보존 기간 |
-|------|-----------|
-| 보안 로그 (인증 실패, 접근 거부) | 1년 |
-| 일반 접근 로그 | 90일 |
-| 디버그 로그 | 7일 |
+| 분류                             | 보존 기간 |
+| -------------------------------- | --------- |
+| 보안 로그 (인증 실패, 접근 거부) | 1년       |
+| 일반 접근 로그                   | 90일      |
+| 디버그 로그                      | 7일       |
