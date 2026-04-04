@@ -2,26 +2,26 @@
 
 ## 위협 매트릭스
 
-| 위협 | 심각도 | 대응 |
-|------|--------|------|
-| 패킷 스니핑 | 높음 | 전 구간 TLS 강제 (내부 mTLS는 후순위) |
-| MITM (중간자 공격) | 높음 | TLS, Agent Card 서명 (mTLS는 후순위) |
-| JWT 위조 | 높음 | RS256, 알고리즘 고정 |
-| 토큰 탈취/재사용 | 높음 | 짧은 만료, JTI 1회용 |
-| X-User-Id 스푸핑 | 높음 | Nginx 헤더 제거 후 덮어씌움 |
-| Agent Card 스푸핑 | 높음 | 서명 검증, 등록 인증 |
-| Redis 직접 접근 | 높음 | bind 제한, TLS, AUTH |
-| Agent 서버 직접 접근 | 높음 | Cloudflare IP만 허용, 내부 시크릿 헤더 |
-| Provider 토큰 탈취 | 높음 | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
-| Kafka 토픽 무단 접근 | 높음 | SASL + ACL |
-| Kafka 메시지 위변조 | 높음 | TLS + 메시지 서명 |
-| Webhook SSRF | 높음 | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지 |
-| 스케줄 남용 | 높음 | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증 |
-| 미허가 Agent 호출 | 높음 | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증 |
-| 권한 상승 | 중간 | 토큰 서명, 권한 검증 |
-| Task Replay | 중간 | JTI, Idempotency Key |
-| DDoS | 중간 | Cloudflare, Rate Limiting, 캐싱 |
-| Kafka 토픽 폭주 | 중간 | Provider별 Rate Limit |
+| 위협                 | 심각도 | 대응                                                       |
+| -------------------- | ------ | ---------------------------------------------------------- |
+| 패킷 스니핑          | 높음   | 전 구간 TLS 강제 (내부 mTLS는 후순위)                      |
+| MITM (중간자 공격)   | 높음   | TLS, Agent Card 서명 (mTLS는 후순위)                       |
+| JWT 위조             | 높음   | RS256, 알고리즘 고정                                       |
+| 토큰 탈취/재사용     | 높음   | 짧은 만료, JTI 1회용                                       |
+| X-User-Id 스푸핑     | 높음   | Nginx 헤더 제거 후 덮어씌움                                |
+| Agent Card 스푸핑    | 높음   | 서명 검증, 등록 인증                                       |
+| Redis 직접 접근      | 높음   | bind 제한, TLS, AUTH                                       |
+| Kafka 자격증명 탈취  | 높음   | 단기 OAUTHBEARER 토큰, Provider 차단 시 갱신 불가          |
+| Provider 토큰 탈취   | 높음   | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
+| Kafka 토픽 무단 접근 | 높음   | SASL + ACL                                                 |
+| Kafka 메시지 위변조  | 높음   | TLS + 메시지 서명                                          |
+| Webhook SSRF         | 높음   | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지 |
+| 스케줄 남용          | 높음   | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증       |
+| 미허가 Agent 호출    | 높음   | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증 |
+| 권한 상승            | 중간   | 토큰 서명, 권한 검증                                       |
+| Task Replay          | 중간   | JTI, Idempotency Key                                       |
+| DDoS                 | 중간   | Cloudflare, Rate Limiting, 캐싱                            |
+| Kafka 토픽 폭주      | 중간   | Provider별 Rate Limit                                      |
 
 ## 네트워크 레이어
 
@@ -73,11 +73,13 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 
 초기화 대상: `X-User-Id`, `X-User-Role`, `X-Agent-Id`, `X-Provider-Id`, `X-Gateway`
 
+> 헤더 주입 흐름 상세는 [인증 문서](../auth/authentication.md#nginx-헤더-주입) 참고.
+
 ### Agent Card 스푸핑 방지
 
 - A2A v0.3 서명된 Agent Card 사용
 - API Service 등록 시 Provider 토큰 인증 필수
-- Agent Card URL이 등록된 endpoint와 일치 여부 확인
+- Agent Card는 등록 시 Provider가 제출, API Service가 서명 검증 후 MongoDB에 저장
 - 등록 허가된 Provider만 등록 가능
 
 ## 인프라 레이어
@@ -89,11 +91,13 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 - TLS: Redis 6.0+ TLS 지원 활용
 - 권한 분리: API Service는 읽기/쓰기(등록), Agent는 heartbeat 갱신(API Service 경유)
 
-### Agent 서버 직접 접근 차단
+### Kafka 자격증명 보호
 
-- OCI 방화벽에서 Cloudflare IP만 443 허용
-- Nginx에서 내부 시크릿 헤더(`X-Internal-Token`) 주입
-- 다운스트림 서비스에서 시크릿 헤더 없으면 403 거부
+Agent 서버는 HTTP를 노출하지 않으며, 모든 통신은 Kafka를 통해 이루어진다. Kafka 자격증명이 유일한 접속 수단이므로 보호가 중요하다.
+
+- OAUTHBEARER 단기 토큰 (1시간 만료)으로 탈취 시 피해 최소화
+- Provider 토큰 차단 시 Kafka 토큰 갱신 불가 → 연결 즉시 차단
+- Kafka 자격증명은 최초 등록 시 1회만 제공, 이후 명시적 재발급 필요
 
 ## Kafka 레이어
 
