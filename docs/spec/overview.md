@@ -35,11 +35,13 @@ graph TD
         Sched <-.->|Kafka| Agents
     end
 
-    Agents[외부 Agent 서버] -->|등록/heartbeat| Nginx
+    Provider[Provider] -->|Agent 등록| Nginx
+    Agents[외부 Agent 서버] <-.->|Kafka| core
 
     linkStyle 7 stroke:#ff6600
     linkStyle 8 stroke:#ff6600
     linkStyle 9 stroke:#ff6600
+    linkStyle 11 stroke:#ff6600
 ```
 
 > 점선(주황)은 Kafka를 경유하는 비동기 통신을 나타낸다.

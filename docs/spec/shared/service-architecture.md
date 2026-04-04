@@ -54,13 +54,13 @@ data class Agent(
     val id: AgentId,
     val name: String,
     val providerId: ProviderId,
-    val endpoint: Url,
+    val agentCard: AgentCard,
     val skills: List<Skill>,
     val createdAt: Instant,
 ) {
     init {
-        require(endpoint.scheme == "https") { "Agent endpoint는 HTTPS만 허용" }
         require(name.isNotBlank()) { "Agent 이름은 필수" }
+        require(skills.isNotEmpty()) { "스킬은 최소 1개 필요" }
     }
 }
 ```
