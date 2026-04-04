@@ -17,6 +17,12 @@ repositories {
     mavenCentral()
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }
