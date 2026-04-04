@@ -1,0 +1,31 @@
+BRANCH=$(git symbolic-ref --short HEAD)
+
+# main/develop 직접 push 차단
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
+  echo ""
+  echo "❌ '$BRANCH' 브랜치에 직접 push할 수 없습니다."
+  echo "   PR을 통해 머지해주세요."
+  echo ""
+  exit 1
+fi
+
+# 브랜치 네이밍 검증
+# 허용 패턴: type/scope/description 또는 release/*, hotfix/*
+TYPES="feat|fix|docs|style|refactor|test|chore|ci|perf"
+SCOPES="api|auth|scheduler|sdk|infra|docs"
+VALID_PATTERN="^(($TYPES)/($SCOPES)/[a-z][a-z0-9-]*|release/.+|hotfix/.+)$"
+
+if ! echo "$BRANCH" | grep -qE "$VALID_PATTERN"; then
+  echo ""
+  echo "❌ 브랜치 이름이 컨벤션에 맞지 않습니다: $BRANCH"
+  echo ""
+  echo "   허용 형식:"
+  echo "     type/scope/description  (예: feat/api/agent-registration)"
+  echo "     release/*               (예: release/1.0.0)"
+  echo "     hotfix/*                (예: hotfix/critical-fix)"
+  echo ""
+  echo "   허용 type:  $TYPES"
+  echo "   허용 scope: $SCOPES"
+  echo ""
+  exit 1
+fi
