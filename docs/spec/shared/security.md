@@ -11,7 +11,7 @@
 | X-User-Id 스푸핑     | 높음   | Nginx 헤더 제거 후 덮어씌움                                |
 | Agent Card 스푸핑    | 높음   | 서명 검증, 등록 인증                                       |
 | Redis 직접 접근      | 높음   | bind 제한, TLS, AUTH                                       |
-| Agent 서버 직접 접근 | 높음   | Cloudflare IP만 허용, 내부 시크릿 헤더                     |
+| Kafka 자격증명 탈취  | 높음   | 단기 OAUTHBEARER 토큰, Provider 차단 시 갱신 불가          |
 | Provider 토큰 탈취   | 높음   | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
 | Kafka 토픽 무단 접근 | 높음   | SASL + ACL                                                 |
 | Kafka 메시지 위변조  | 높음   | TLS + 메시지 서명                                          |
@@ -79,7 +79,7 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 
 - A2A v0.3 서명된 Agent Card 사용
 - API Service 등록 시 Provider 토큰 인증 필수
-- Agent Card URL이 등록된 endpoint와 일치 여부 확인
+- Agent Card는 등록 시 Provider가 제출, API Service가 서명 검증 후 MongoDB에 저장
 - 등록 허가된 Provider만 등록 가능
 
 ## 인프라 레이어
@@ -91,11 +91,13 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 - TLS: Redis 6.0+ TLS 지원 활용
 - 권한 분리: API Service는 읽기/쓰기(등록), Agent는 heartbeat 갱신(API Service 경유)
 
-### Agent 서버 직접 접근 차단
+### Kafka 자격증명 보호
 
-- OCI 방화벽에서 Cloudflare IP만 443 허용
-- Nginx에서 내부 시크릿 헤더(`X-Internal-Token`) 주입
-- 다운스트림 서비스에서 시크릿 헤더 없으면 403 거부
+Agent 서버는 HTTP를 노출하지 않으며, 모든 통신은 Kafka를 통해 이루어진다. Kafka 자격증명이 유일한 접속 수단이므로 보호가 중요하다.
+
+- OAUTHBEARER 단기 토큰 (1시간 만료)으로 탈취 시 피해 최소화
+- Provider 토큰 차단 시 Kafka 토큰 갱신 불가 → 연결 즉시 차단
+- Kafka 자격증명은 최초 등록 시 1회만 제공, 이후 명시적 재발급 필요
 
 ## Kafka 레이어
 

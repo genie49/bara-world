@@ -186,11 +186,11 @@ UseCase → SendTaskPort (interface) → TaskKafkaAdapter → SDK → Kafka
 
 ## 서비스별 어댑터 구성
 
-| 서비스    | 인바운드 어댑터            | 아웃바운드 어댑터                             |
-| --------- | -------------------------- | --------------------------------------------- |
-| Auth      | REST                       | MongoDB, Google OAuth API                     |
-| API       | REST, Kafka Consumer       | MongoDB, Redis, Kafka Producer (SDK)          |
-| Scheduler | @Scheduled, Kafka Consumer | MongoDB, Kafka Producer (SDK), HTTP (webhook) |
+| 서비스    | 인바운드 어댑터            | 아웃바운드 어댑터                                    |
+| --------- | -------------------------- | ---------------------------------------------------- |
+| Auth      | REST                       | MongoDB, Google OAuth API                            |
+| API       | REST, Kafka Consumer       | MongoDB, Redis, Kafka Producer (SDK)                 |
+| Scheduler | @Scheduled, Kafka Consumer | MongoDB, Kafka Producer (SDK), HTTP (사용자 webhook) |
 
 ## DTO 변환 위치
 
