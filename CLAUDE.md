@@ -12,9 +12,18 @@ Google A2A(Agent-to-Agent) 프로토콜 기반 멀티 에이전트 플랫폼. Ag
 
 ```bash
 npm install    # Husky Git hooks 자동 설정 (prepare 스크립트)
+
+# 로컬 인프라 시작 (MongoDB, Redis, Kafka)
+docker compose -f infra/docker-compose.dev.yml up -d
+
+# 전체 빌드
+./gradlew build
+
+# 개별 서비스 실행
+./gradlew :apps:auth:bootRun
 ```
 
-`package.json`은 Git 도구 전용(devDependencies만). 서비스 빌드는 각자의 도구(Gradle 등)를 사용한다.
+`package.json`은 Git 도구 전용(devDependencies만). 서비스 빌드는 Gradle 멀티 프로젝트로 관리한다. JDK 21 필수.
 
 ## Git Convention
 
