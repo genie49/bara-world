@@ -5,5 +5,6 @@ pluginManagement {
 rootProject.name = "bara-world"
 
 include(
+    ":apps:auth",
     ":libs:common",
 )

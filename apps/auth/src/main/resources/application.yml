@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: bara-auth
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/bara-auth
+
+server:
+  port: 8081
