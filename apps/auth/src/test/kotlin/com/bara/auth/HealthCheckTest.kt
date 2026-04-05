@@ -3,15 +3,20 @@ package com.bara.auth
 import com.bara.auth.adapter.out.persistence.UserMongoDataRepository
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestPropertySource
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
 import java.security.KeyPairGenerator
 import java.util.Base64
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @TestPropertySource(
     properties = [
         "spring.autoconfigure.exclude=" +
@@ -25,7 +30,10 @@ import java.util.Base64
         "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
     ]
 )
-class BaraAuthApplicationTest {
+class HealthCheckTest {
+
+    @Autowired
+    lateinit var mockMvc: MockMvc
 
     @MockkBean
     lateinit var userMongoDataRepository: UserMongoDataRepository
@@ -34,7 +42,30 @@ class BaraAuthApplicationTest {
     lateinit var stringRedisTemplate: StringRedisTemplate
 
     @Test
-    fun contextLoads() {
+    fun `health endpoint returns UP`() {
+        mockMvc.get("/actuator/health")
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("UP") }
+            }
+    }
+
+    @Test
+    fun `liveness probe returns UP`() {
+        mockMvc.get("/actuator/health/liveness")
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("UP") }
+            }
+    }
+
+    @Test
+    fun `readiness probe returns UP`() {
+        mockMvc.get("/actuator/health/readiness")
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("UP") }
+            }
     }
 
     companion object {

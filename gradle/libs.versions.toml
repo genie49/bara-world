@@ -3,16 +3,25 @@ kotlin = "2.1.20"
 spring-boot = "3.4.4"
 spring-dependency-management = "1.1.7"
 mockk = "1.13.16"
+springmockk = "4.0.2"
+java-jwt = "4.4.0"
+google-api-client = "2.7.0"
 
 [libraries]
 # Application dependencies
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-data-mongodb = { module = "org.springframework.boot:spring-boot-starter-data-mongodb" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
+java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
+google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
 
 # Gradle plugin artifacts (for build-logic)
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-allopen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
 spring-boot-gradle-plugin = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
