@@ -3,6 +3,9 @@ kotlin = "2.1.20"
 spring-boot = "3.4.4"
 spring-dependency-management = "1.1.7"
 mockk = "1.13.16"
+java-jwt = "4.4.0"
+google-api-client = "2.7.0"
+spring-dotenv = "4.0.0"
 
 [libraries]
 # Application dependencies
@@ -12,6 +15,9 @@ spring-boot-starter-data-mongodb = { module = "org.springframework.boot:spring-b
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
+google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
+spring-dotenv = { module = "me.paulschwarz:spring-dotenv", version.ref = "spring-dotenv" }
 
 # Gradle plugin artifacts (for build-logic)
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
