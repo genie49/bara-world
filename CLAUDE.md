@@ -46,6 +46,16 @@ cd apps/fe && pnpm install && pnpm dev
 - `infra.sh`는 루트 `.env` 파일을 자동으로 `--env-file`로 주입.
 - Nginx 게이트웨이 설정: `infra/nginx/nginx.conf` (`/` → fe, `/auth/` → auth).
 
+### CI/CD
+
+- **CI**: PR → `develop`/`main` 시 자동 빌드/테스트 (path filter로 변경 서비스만)
+  - `ci-auth.yml`: Gradle test + bootJar
+  - `ci-fe.yml`: pnpm test + build
+- **CD**: `main` 머지 시 자동 배포
+  - 변경 감지 → Docker build → GCP Artifact Registry push → SSH → OCI VM(K3s) 배포
+  - 상세 설계: `docs/spec/shared/ci-cd-design.md`
+- **K8s 환경 분리**: Kustomize (`infra/k8s/overlays/dev/`, `infra/k8s/overlays/prod/`)
+
 ### Auth Service 첫 실행 (1회 세팅)
 
 Auth Service는 RSA 키쌍과 Google OAuth Client가 필요하다. 상세: [`docs/guides/auth-local-setup.md`](docs/guides/auth-local-setup.md).
