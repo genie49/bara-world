@@ -94,15 +94,8 @@ apply_manifests() {
         echo "  ⚠ 클러스터에 연결할 수 없음. 먼저 ./scripts/k8s.sh start 실행"
         exit 1
     fi
-    kubectl apply -f "$K8S_DIR/namespaces.yaml"
-    kubectl apply -f "$K8S_DIR/data/"
+    kubectl apply -k "$K8S_DIR/overlays/dev/"
     create_secrets
-    kubectl apply -f "$K8S_DIR/core/"
-
-    kubectl create configmap nginx-config \
-        --from-file=default.conf="$K8S_DIR/gateway/nginx.conf" \
-        -n gateway --dry-run=client -o yaml | kubectl apply -f -
-    kubectl apply -f "$K8S_DIR/gateway/nginx.yaml"
     echo "✓ 매니페스트 적용 완료"
 }
 
