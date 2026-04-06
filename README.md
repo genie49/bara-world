@@ -126,7 +126,7 @@ Auth Service 로컬 실행 가이드: [docs/guides/auth-local-setup.md](docs/gui
 ./gradlew :apps:auth:bootRun
 
 # 3. Frontend
-cd clients/web && pnpm install && pnpm dev
+cd apps/fe && pnpm install && pnpm dev
 ```
 
 Git 컨벤션: [docs/guides/git-convention.md](docs/guides/git-convention.md)

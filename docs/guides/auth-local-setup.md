@@ -2,7 +2,7 @@
 
 Google OAuth 로그인과 자체 JWT 발급이 동작하는 Auth Service를 로컬에서 처음 실행할 때까지의 단계.
 
-프론트엔드(`clients/web`)까지 포함하여 end-to-end 로그인 플로우를 확인할 수 있다.
+프론트엔드(`apps/fe`)까지 포함하여 end-to-end 로그인 플로우를 확인할 수 있다.
 
 ## 전제 조건
 
@@ -35,7 +35,7 @@ rm /tmp/jwt-priv.pem /tmp/jwt-pub.pem
 3. **Create Credentials** → **OAuth client ID**
 4. 애플리케이션 유형: **Web application**
 5. 이름: `bara-web` (임의)
-6. **Authorized redirect URIs**: `http://localhost:5173/auth/google/callback`
+6. **Authorized redirect URIs**: `http://localhost/auth/google/callback`
    - 승인된 JavaScript 원본은 비워둔다.
    - 대소문자/경로 정확히 일치해야 한다. 끝에 슬래시 금지.
 7. **Create**
@@ -57,7 +57,7 @@ cp .env.example .env
 | `BARA_AUTH_JWT_PUBLIC_KEY`       | 1단계 출력                                                 |
 | `BARA_AUTH_GOOGLE_CLIENT_ID`     | 2단계 Google Console                                       |
 | `BARA_AUTH_GOOGLE_CLIENT_SECRET` | 2단계 Google Console                                       |
-| `BARA_AUTH_GOOGLE_REDIRECT_URI`  | 기본값 `http://localhost:5173/auth/google/callback` 그대로 |
+| `BARA_AUTH_GOOGLE_REDIRECT_URI`  | 기본값 `http://localhost/auth/google/callback` 그대로 |
 
 `.env`는 `.gitignore`에 포함되어 커밋되지 않는다. Secret을 절대 PR/스크린샷에 노출하지 말 것. 노출되면 Google Console에서 즉시 Secret을 rotate한다.
 
@@ -105,7 +105,7 @@ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:8081/a
 별도 터미널에서:
 
 ```bash
-cd clients/web
+cd apps/fe
 pnpm install   # 첫 실행 시 1회
 pnpm dev
 ```
@@ -136,7 +136,7 @@ docker exec -it $(docker ps -qf name=mongo) mongosh bara-auth --eval 'db.users.f
 | `Missing key encoding` 예외로 앱 시작 실패      | `.env`의 JWT 키가 비었거나 base64가 깨짐               | 1단계 명령을 다시 실행하여 값을 갱신                                                                    |
 | `UnsatisfiedDependencyException`                | `kotlin-reflect`가 classpath에 없음                    | 이미 `apps/auth/build.gradle.kts`에 포함. Gradle 캐시 지우고 재빌드: `./gradlew :apps:auth:clean build` |
 | Google에서 `redirect_uri_mismatch` 에러         | Console에 등록한 redirect URI와 `.env`의 값이 불일치   | 문자 단위로 동일한지 확인. 끝 슬래시/http-https/대소문자 주의                                           |
-| FE에서 로그인 버튼 클릭 시 404                  | Vite dev server가 실행 중이지 않거나 proxy 경로가 틀림 | `clients/web` 디렉토리에서 `pnpm dev` 실행 확인                                                         |
+| FE에서 로그인 버튼 클릭 시 404                  | Vite dev server가 실행 중이지 않거나 proxy 경로가 틀림 | `apps/fe` 디렉토리에서 `pnpm dev` 실행 확인                                                         |
 | `redirect_uri_mismatch` + 로컬만 수정해도 안 됨 | Google Console 변경사항 반영 지연                      | 수 분 대기 후 재시도                                                                                    |
 | `MongoSocketOpenException`                      | Docker Compose의 MongoDB가 기동 전                     | `./scripts/infra.sh up dev` 확인, `docker ps`로 컨테이너 상태 점검                                      |
 | `Address already in use: 8081`                  | 이전 bootRun이 종료되지 않음                           | `lsof -ti:8081 \| xargs kill`                                                                           |

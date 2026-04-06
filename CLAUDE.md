@@ -23,11 +23,11 @@ npm install    # Husky Git hooks 자동 설정 (prepare 스크립트)
 ./gradlew :apps:auth:bootRun
 
 # Frontend 실행 (5173)
-cd clients/web && pnpm install && pnpm dev
+cd apps/fe && pnpm install && pnpm dev
 ```
 
 - 루트 `package.json`은 **Git 도구 전용** (Husky/lint-staged). 프로젝트 의존성 아님.
-- `clients/web/package.json`은 **FE 독립 프로젝트**. `pnpm` 사용.
+- `apps/fe/package.json`은 **FE 독립 프로젝트**. `pnpm` 사용.
 - 서비스 빌드는 Gradle 멀티 프로젝트 (`settings.gradle.kts`에 모듈 등록).
 - **JDK 21 필수**. Gradle daemon은 `gradle/gradle-daemon-jvm.properties`로 자동 선택.
 
@@ -39,8 +39,8 @@ Auth Service는 RSA 키쌍과 Google OAuth Client가 필요하다. 상세: [`doc
 
 1. `cp .env.example .env`
 2. `openssl`로 RSA 키쌍 생성 → base64 인코딩 → `.env`에 기입
-3. Google Cloud Console에서 OAuth 2.0 Client ID 생성, redirect URI에 `http://localhost:5173/auth/google/callback` 추가 → `.env`에 기입
-4. `./scripts/infra.sh up dev` + `./gradlew :apps:auth:bootRun` + `cd clients/web && pnpm dev` (3개 터미널)
+3. Google Cloud Console에서 OAuth 2.0 Client ID 생성, redirect URI에 `http://localhost/auth/google/callback` 추가 → `.env`에 기입
+4. `./scripts/infra.sh up dev` + `./gradlew :apps:auth:bootRun` + `cd apps/fe && pnpm dev` (3개 터미널)
 5. `http://localhost:5173/` 접속하여 Google 로그인 동작 확인
 
 `.env` 파일은 `apps/auth/build.gradle.kts`의 `bootRun` task가 읽어 환경변수로 주입한다 (별도 라이브러리 사용 안 함).
@@ -49,7 +49,7 @@ Auth Service는 RSA 키쌍과 Google OAuth Client가 필요하다. 상세: [`doc
 
 ```bash
 ./gradlew :apps:auth:test         # 백엔드 단위/슬라이스 테스트
-cd clients/web && pnpm test       # FE Vitest
+cd apps/fe && pnpm test            # FE Vitest
 ```
 
 Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude + `@MockkBean` 교체).

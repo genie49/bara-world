@@ -8,7 +8,7 @@ IMAGE_PREFIX="bara"
 # 형식: "name|dockerfile_path"
 SERVICES=(
     "auth|apps/auth/Dockerfile"
-    "web|clients/web/Dockerfile"
+    "fe|apps/fe/Dockerfile"
 )
 
 # ── 유틸 ───────────────────────────────────────────────────
@@ -28,7 +28,7 @@ $(for s in "${SERVICES[@]}"; do echo "  ${s%%|*}"; done)
 Examples:
   $0 build           # 전체 빌드
   $0 build auth      # auth 서비스만 빌드
-  $0 clean web       # web 이미지 삭제
+  $0 clean fe        # fe 이미지 삭제
   $0 clean           # 전체 이미지 삭제
 EOF
     exit 1
