@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: bara/auth:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://mongodb.data.svc.cluster.local:27017/bara-auth"
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis.data.svc.cluster.local"
+            - name: BARA_AUTH_JWT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: jwt-private-key
+            - name: BARA_AUTH_JWT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: jwt-public-key
+            - name: BARA_AUTH_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: google-client-id
+            - name: BARA_AUTH_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: google-client-secret
+            - name: BARA_AUTH_GOOGLE_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: google-redirect-uri
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: core
+spec:
+  selector:
+    app: auth
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: core
+data:
+  google-redirect-uri: "http://localhost/auth/google/callback"
+---
+# Secret은 직접 apply하거나 CI/CD에서 주입한다.
+# 아래는 구조 참고용. 실제 값은 base64 인코딩하여 채운다.
+#
+# kubectl create secret generic auth-secrets -n core \
+#   --from-literal=jwt-private-key="<base64-encoded-pem>" \
+#   --from-literal=jwt-public-key="<base64-encoded-pem>" \
+#   --from-literal=google-client-id="<client-id>" \
+#   --from-literal=google-client-secret="<client-secret>"
