@@ -145,11 +145,18 @@ jobs:
             fi
 
             # Parameter Manager에서 시크릿 pull + K8s Secret 갱신
-            cd ~/bara-world
-            ./scripts/secrets.sh pull
+            LATEST=$(gcloud parametermanager parameters versions list \
+              --parameter=bara-env-prod --location=global \
+              --sort-by=~createTime --limit=1 --format="value(name)")
+            VERSION_ID=$(basename "$LATEST")
+            gcloud parametermanager parameters versions describe "$VERSION_ID" \
+              --parameter=bara-env-prod --location=global \
+              --format="value(payload.data)" | base64 -d > /tmp/.env.prod
+
             kubectl delete secret auth-secrets -n core --ignore-not-found
             kubectl create secret generic auth-secrets -n core \
-              --from-env-file=.env.prod
+              --from-env-file=/tmp/.env.prod
+            rm -f /tmp/.env.prod
 
             # 변경된 서비스 배포
             if [ "$AUTH_CHANGED" = "true" ]; then
