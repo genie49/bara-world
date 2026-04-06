@@ -1,0 +1,2 @@
+# CI/CD 워크플로우 변경은 반드시 소유자 승인 필요
+/.github/workflows/ @genie49

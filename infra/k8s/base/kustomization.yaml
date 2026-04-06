@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+  - data/mongodb.yaml
+  - data/redis.yaml
+  - data/kafka.yaml
+  - core/auth.yaml
+  - core/fe.yaml
+  - gateway/nginx.yaml
+
+configMapGenerator:
+  - name: nginx-config
+    namespace: gateway
+    files:
+      - default.conf=gateway/nginx.conf
+    options:
+      disableNameSuffixHash: true

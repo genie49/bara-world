@@ -1,0 +1,11 @@
+# Co-Authored-By 차단 (대소문자 무관)
+if grep -qi "Co-Authored-By:" "$1"; then
+  echo ""
+  echo "❌ Co-Authored-By 트레일러는 허용되지 않습니다."
+  echo "   커밋 메시지에서 Co-Authored-By 라인을 제거해주세요."
+  echo ""
+  exit 1
+fi
+
+# commitlint 실행
+npx --no -- commitlint --edit "$1"

@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: bara-auth
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/bara-auth
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+bara:
+  auth:
+    jwt:
+      issuer: bara-auth
+      audience: bara-world
+      expiry-seconds: 3600
+      private-key-base64: ${BARA_AUTH_JWT_PRIVATE_KEY:}
+      public-key-base64: ${BARA_AUTH_JWT_PUBLIC_KEY:}
+    google:
+      client-id: ${BARA_AUTH_GOOGLE_CLIENT_ID:}
+      client-secret: ${BARA_AUTH_GOOGLE_CLIENT_SECRET:}
+      redirect-uri: ${BARA_AUTH_GOOGLE_REDIRECT_URI:http://localhost:5173/auth/google/callback}
