@@ -146,11 +146,10 @@ infra/k8s/
 ### OCI VM 사전 셋업
 
 - **Host**: OCI Free Tier ARM (aarch64), Ubuntu 22.04
-- **K3s**: `--disable=traefik,servicelb` (Nginx 직접 사용)
+- **K3s**: `--disable=traefik,servicelb --write-kubeconfig-mode=0644`
 - **Docker**: gcloud auth configure-docker 용 (K3s 이미지 pull은 imagePullSecret 사용)
 - **gcloud CLI**: Parameter Manager 접근 + `gcloud auth configure-docker`
 - **kubectl**: K3s 심볼릭 링크 (`/usr/local/bin/kubectl` → `k3s`)
-- **kubeconfig**: `/etc/rancher/k3s/k3s.yaml` 권한 설정 (ubuntu 유저 접근 가능)
 
 초기 매니페스트 적용은 deploy 워크플로우가 자동 처리 (레포 클론 불필요).
 
