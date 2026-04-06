@@ -52,7 +52,7 @@ create_secrets() {
 create_cluster() {
     echo "──── k3d 클러스터 생성 ────"
     k3d cluster create "$CLUSTER_NAME" \
-        --port "80:30080@server:0" \
+        --port "80:80@loadbalancer" \
         --wait
 
     load_images

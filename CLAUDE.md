@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Google A2A(Agent-to-Agent) 프로토콜 기반 멀티 에이전트 플랫폼. Agent를 제외한 모든 서비스를 이 모노레포에서 관리한다.
 
-**Tech Stack:** Kotlin + Spring Boot (API/Auth), Apache Kafka (KRaft), MongoDB, Redis, K3s, Cloudflare, Nginx
+**Tech Stack:** Kotlin + Spring Boot (API/Auth), Apache Kafka (KRaft), MongoDB, Redis, K3s, Cloudflare, Traefik + K8s Gateway API
 
 ## Development Setup
 
@@ -31,20 +31,21 @@ cd apps/fe && pnpm install && pnpm dev
 - 서비스 빌드는 Gradle 멀티 프로젝트 (`settings.gradle.kts`에 모듈 등록).
 - **JDK 21 필수**. Gradle daemon은 `gradle/gradle-daemon-jvm.properties`로 자동 선택.
 
-### Docker 빌드 & 통합 테스트
+### Docker 빌드 & K8s 로컬 테스트
 
 ```bash
 ./scripts/docker.sh build           # 전체 Docker 이미지 빌드 (auth, fe)
 ./scripts/docker.sh build auth      # 개별 빌드
 ./scripts/docker.sh clean           # 이미지 삭제
 
-./scripts/infra.sh up test          # 인프라 + 서비스 + Nginx (localhost:80)
-./scripts/infra.sh down test        # 전체 중지
+./scripts/k8s.sh create             # k3d 클러스터 생성 + 이미지 로드 + 배포 (localhost:80)
+./scripts/k8s.sh stop               # 클러스터 중지
+./scripts/k8s.sh start              # 클러스터 재시작
+./scripts/k8s.sh delete             # 클러스터 삭제
 ```
 
-- `docker.sh`로 빌드된 `bara/<service>:latest` 이미지를 `docker-compose.test.yml`이 참조.
-- `infra.sh`는 루트 `.env` 파일을 자동으로 `--env-file`로 주입.
-- Nginx 게이트웨이 설정: `infra/nginx/nginx.conf` (`/` → fe, `/auth/` → auth).
+- 게이트웨이: Traefik (K3s 내장) + Gateway API (`infra/k8s/base/gateway/`)
+- 로컬 인프라(MongoDB, Redis, Kafka)만 필요 시: `./scripts/infra.sh up`
 
 ### CI/CD
 
@@ -65,7 +66,7 @@ Auth Service는 RSA 키쌍과 Google OAuth Client가 필요하다. 상세: [`doc
 1. `cp .env.example .env`
 2. `openssl`로 RSA 키쌍 생성 → base64 인코딩 → `.env`에 기입
 3. Google Cloud Console에서 OAuth 2.0 Client ID 생성, redirect URI에 `http://localhost/auth/google/callback` 추가 → `.env`에 기입
-4. `./scripts/docker.sh build` + `./scripts/infra.sh up test`
+4. `./scripts/docker.sh build` + `./scripts/k8s.sh create`
 5. `http://localhost/` 접속하여 Google 로그인 동작 확인
 
 `.env` 파일은 `apps/auth/build.gradle.kts`의 `bootRun` task가 읽어 환경변수로 주입한다 (별도 라이브러리 사용 안 함).

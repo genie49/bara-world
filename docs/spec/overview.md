@@ -11,12 +11,12 @@ graph TD
     User[사용자] -->|REST| CF[Cloudflare]
     User -->|텔레그램| TG[텔레그램]
 
-    CF --> Nginx
+    CF --> Traefik
     TG -->|Webhook| Bot
 
     subgraph VM1[OCI VM1 - K3s]
         subgraph gateway[Gateway]
-            Nginx[Nginx]
+            Traefik[Traefik]
         end
 
         subgraph core[Core]
@@ -27,15 +27,15 @@ graph TD
             Sched[Scheduler Service]
         end
 
-        Nginx --> Auth
-        Nginx --> ApiSvc
-        Nginx --> FE
+        Traefik --> Auth
+        Traefik --> ApiSvc
+        Traefik --> FE
         ApiSvc <-.->|Kafka| Agents
         Bot <-.->|Kafka| Agents
         Sched <-.->|Kafka| Agents
     end
 
-    Provider[Provider] -->|Agent 등록| Nginx
+    Provider[Provider] -->|Agent 등록| Traefik
     Agents[외부 Agent 서버] <-.->|Kafka| core
 
     linkStyle 7 stroke:#ff6600
@@ -52,7 +52,7 @@ graph TD
 
 | 구성 요소         | 역할                                                                           |
 | ----------------- | ------------------------------------------------------------------------------ |
-| Nginx             | 통합 Gateway, `auth_request` 기반 인증 위임 (토큰 타입 자동 판별)              |
+| Traefik           | 통합 Gateway (K3s 내장), K8s Gateway API 기반 경로 라우팅                      |
 | Auth Service      | Google OAuth 처리, JWT 발급, Provider 토큰 관리, Kafka 토큰 발급               |
 | API Service       | Agent 등록/조회, Agent Card proxy, Kafka 계정 자동 생성, 태스크 발행/결과 수신 |
 | MongoDB           | User, Provider 정보 저장                                                       |
@@ -98,7 +98,7 @@ graph TD
 | Database                | MongoDB                             |
 | Cache / Agent Registry  | Redis                               |
 | Messaging               | Apache Kafka (KRaft 모드)           |
-| Reverse Proxy           | Nginx                               |
+| Reverse Proxy           | Traefik (K3s 내장) + K8s Gateway API |
 | CDN / TLS               | Cloudflare (Free)                   |
 | Logging                 | Fluent Bit → Kafka → Loki → Grafana |
 | Infrastructure          | OCI Ampere A1 (ARM64, 무료 티어)    |
@@ -126,7 +126,7 @@ graph TD
 
 | 문서                                                             | 내용                                         |
 | ---------------------------------------------------------------- | -------------------------------------------- |
-| [shared/infrastructure.md](shared/infrastructure.md)             | VM, K3s, Cloudflare, 도메인, Pod 구성        |
+| [shared/infrastructure.md](shared/infrastructure.md)             | VM, K3s, Cloudflare, Traefik, 도메인, Pod 구성 |
 | [shared/messaging.md](shared/messaging.md)                       | Kafka 기반 통신, 토픽 설계, OAUTHBEARER, SSE |
 | [shared/security.md](shared/security.md)                         | 위협 매트릭스, 대응, 헤더 보안, ACL          |
 | [shared/logging.md](shared/logging.md)                           | Fluent Bit, Loki, Grafana, X-Request-Id 추적 |
@@ -147,7 +147,7 @@ graph TD
 | [002](decisions/adr-002-message-based-communication.md) | HTTP 대신 Kafka 메시지 기반 비동기 통신 |
 | [003](decisions/adr-003-provider-token-over-mtls.md)    | mTLS 대신 Provider 토큰 방식            |
 | [004](decisions/adr-004-kafka-oauthbearer.md)           | Kafka 인증에 OAUTHBEARER 단기 토큰      |
-| [005](decisions/adr-005-single-nginx-gateway.md)        | Nginx 1개로 통합, 경로 기반 분리        |
+| [005](decisions/adr-005-single-nginx-gateway.md)        | Nginx 1개로 통합, 경로 기반 분리 *(superseded: Traefik + K8s Gateway API로 전환)* |
 | [006](decisions/adr-006-redis-agent-registry.md)        | 인덱스 없이 Redis TTL + SCAN            |
 | [007](decisions/adr-007-mongodb-over-rdbms.md)          | 관계형 DB 대신 MongoDB                  |
 | [008](decisions/adr-008-cloudflare-full-strict.md)      | Cloudflare Full Strict 모드             |
