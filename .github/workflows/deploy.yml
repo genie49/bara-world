@@ -44,7 +44,7 @@ jobs:
   build-push-auth:
     needs: detect-changes
     if: needs.detect-changes.outputs.auth == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     environment: production
     steps:
       - name: Checkout
@@ -83,7 +83,7 @@ jobs:
   build-push-fe:
     needs: detect-changes
     if: needs.detect-changes.outputs.fe == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     environment: production
     steps:
       - name: Checkout
