@@ -34,8 +34,12 @@ jobs:
               - 'gradle/**'
               - 'settings.gradle.kts'
               - 'build.gradle.kts'
+              - '.github/workflows/**'
+              - 'infra/k8s/**'
             fe:
               - 'apps/fe/**'
+              - '.github/workflows/**'
+              - 'infra/k8s/**'
 
   build-push-auth:
     needs: detect-changes
