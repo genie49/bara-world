@@ -145,6 +145,8 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
+          AUTH_CHANGED: ${{ needs.detect-changes.outputs.auth }}
+          FE_CHANGED: ${{ needs.detect-changes.outputs.fe }}
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: asia-northeast3-docker.pkg.dev
           REPOSITORY: bara-world/bara
@@ -152,58 +154,24 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: IMAGE_TAG,REGISTRY,REPOSITORY
+          envs: AUTH_CHANGED,FE_CHANGED,IMAGE_TAG,REGISTRY,REPOSITORY
           script: |
             set -euo pipefail
 
-            # prod overlay의 이미지 태그를 현재 커밋 SHA로 덮어쓰기
+            # 1. imagePullSecret 갱신 (K8s 네이티브, K3s 재시작 불필요)
+            TOKEN=$(gcloud auth print-access-token)
+            kubectl create namespace core --dry-run=client -o yaml | kubectl apply -f -
+            kubectl delete secret registry-credentials -n core --ignore-not-found
+            kubectl create secret docker-registry registry-credentials -n core \
+              --docker-server=asia-northeast3-docker.pkg.dev \
+              --docker-username=oauth2accesstoken \
+              --docker-password="$TOKEN"
+
+            # 2. 매니페스트 동기화 (레포의 prod overlay 그대로 적용)
             cd ~/deploy/infra/k8s
-            cat > overlays/prod/kustomization.yaml <<KUST
-            apiVersion: kustomize.config.k8s.io/v1beta1
-            kind: Kustomization
-
-            resources:
-              - ../../base
-
-            images:
-              - name: bara/auth
-                newName: $REGISTRY/$REPOSITORY/auth
-                newTag: "$IMAGE_TAG"
-              - name: bara/fe
-                newName: $REGISTRY/$REPOSITORY/fe
-                newTag: "$IMAGE_TAG"
-
-            patches:
-              - target:
-                  kind: Deployment
-                  name: auth
-                  namespace: core
-                patch: |
-                  - op: add
-                    path: /spec/template/spec/containers/0/imagePullPolicy
-                    value: Always
-              - target:
-                  kind: Deployment
-                  name: fe
-                  namespace: core
-                patch: |
-                  - op: add
-                    path: /spec/template/spec/containers/0/imagePullPolicy
-                    value: Always
-              - target:
-                  kind: ConfigMap
-                  name: auth-config
-                  namespace: core
-                patch: |
-                  - op: replace
-                    path: /data/google-redirect-uri
-                    value: "https://bara.world/auth/google/callback"
-            KUST
-
-            # 매니페스트 적용
             kubectl apply -k overlays/prod/
 
-            # Parameter Manager에서 시크릿 pull + K8s Secret 갱신
+            # 3. Parameter Manager에서 시크릿 pull + K8s Secret 갱신
             LATEST=$(gcloud parametermanager parameters versions list \
               --parameter=bara-env-prod --location=global \
               --sort-by=~createTime --limit=1 --format="value(name)")
@@ -217,9 +185,23 @@ jobs:
               --from-env-file=/tmp/.env.prod
             rm -f /tmp/.env.prod
 
-            # 배포 완료 대기
-            kubectl rollout status deployment/auth -n core --timeout=120s
-            kubectl rollout status deployment/fe -n core --timeout=120s
+            # 4. 변경된 서비스만 이미지 업데이트
+            if [ "$AUTH_CHANGED" = "true" ]; then
+              kubectl set image deployment/auth -n core \
+                auth=$REGISTRY/$REPOSITORY/auth:$IMAGE_TAG
+            fi
+            if [ "$FE_CHANGED" = "true" ]; then
+              kubectl set image deployment/fe -n core \
+                fe=$REGISTRY/$REPOSITORY/fe:$IMAGE_TAG
+            fi
+
+            # 5. 변경된 서비스만 rollout 대기
+            if [ "$AUTH_CHANGED" = "true" ]; then
+              kubectl rollout status deployment/auth -n core --timeout=180s
+            fi
+            if [ "$FE_CHANGED" = "true" ]; then
+              kubectl rollout status deployment/fe -n core --timeout=180s
+            fi
 
             # 정리
             rm -rf ~/deploy
