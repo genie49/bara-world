@@ -4,24 +4,30 @@
 
 ## 디렉토리 구조
 
+> ✓ = 구현 완료, ○ = 계획됨 (미구현)
+
 ```
 bara-world/
 ├── apps/                          # 실행 가능한 애플리케이션
-│   ├── auth/                      #   Auth Service (Spring Boot)
-│   ├── api/                       #   API Service (Spring Boot)
-│   ├── scheduler/                 #   Scheduler Service (Spring Boot)
-│   ├── fe/                        #   웹 FE
-│   └── telegram/                  #   Telegram Service
+│   ├── auth/                      # ✓ Auth Service (Spring Boot)
+│   ├── fe/                        # ✓ 웹 FE (Vite + React, pnpm)
+│   ├── api/                       # ○ API Service (Spring Boot)
+│   ├── scheduler/                 # ○ Scheduler Service (Spring Boot)
+│   └── telegram/                  # ○ Telegram Service
 ├── libs/                          # 공유 라이브러리
-│   └── common/                    #   서비스 간 공유 코드
-├── sdk/                           # 공용 SDK (외부 Agent용)
+│   └── common/                    # ✓ 서비스 간 공유 코드
+├── sdk/                           # ○ 공용 SDK (외부 Agent용)
 │   ├── java/
 │   ├── python/
 │   └── typescript/
 ├── infra/                         # 인프라 설정
-│   ├── nginx/                     #   Nginx 설정 파일
-│   ├── k8s/                       #   K3s 매니페스트
-│   └── docker-compose.dev.yml     #   로컬 개발용 인프라
+│   ├── nginx/                     # ✓ Nginx 설정 파일
+│   ├── k8s/                       # ○ K3s 매니페스트
+│   ├── docker-compose.dev.yml     # ✓ 로컬 개발용 인프라
+│   └── docker-compose.test.yml    # ✓ 통합 테스트용 (인프라 + 서비스 + Nginx)
+├── scripts/                       # 운영 스크립트
+│   ├── infra.sh                   # ✓ Docker Compose 관리 (up/down, dev/test)
+│   └── docker.sh                  # ✓ 서비스별 Docker 이미지 빌드/클린
 ├── docs/                          # 문서
 │   ├── spec/                      #   시스템 설계 문서
 │   └── guides/                    #   개발자 가이드
@@ -29,6 +35,8 @@ bara-world/
 ├── build.gradle.kts               # Gradle 루트 — 공통 설정
 └── settings.gradle.kts            # Gradle 모듈 등록
 ```
+
+> `apps/fe`는 Node.js 프로젝트로 Gradle 빌드 대상이 아니다. `settings.gradle.kts`에는 Spring Boot 서비스(`apps/auth` 등)와 `libs/common`만 등록한다.
 
 ## 앱 구성
 
@@ -104,8 +112,22 @@ Gradle 멀티 프로젝트로 전체 또는 개별 빌드가 가능하다.
 각 서비스는 Docker 이미지로 빌드되어 K3s Pod으로 배포된다.
 
 ```
-소스 → Gradle 빌드 → jar → Docker 이미지 → K3s Pod
+Spring Boot: 소스 → Gradle bootJar → Docker multi-stage → K3s Pod
+FE:          소스 → pnpm build → Docker multi-stage (Nginx) → K3s Pod
 ```
+
+### Docker 빌드
+
+`scripts/docker.sh`로 서비스별 또는 전체 Docker 이미지를 빌드/클린한다.
+
+```bash
+./scripts/docker.sh build           # 전체 빌드
+./scripts/docker.sh build auth      # auth만 빌드
+./scripts/docker.sh build fe        # fe만 빌드
+./scripts/docker.sh clean           # 전체 이미지 삭제
+```
+
+빌드된 이미지는 `bara/<service>:latest` 태그가 붙는다. `infra/docker-compose.test.yml`에서 이 이미지를 참조한다.
 
 ### K3s Pod 구성
 
@@ -128,26 +150,21 @@ Gradle 멀티 프로젝트로 전체 또는 개별 빌드가 가능하다.
 
 ## 로컬 개발 환경
 
-로컬에서는 인프라만 Docker Compose로 띄우고, 서비스는 IDE에서 직접 실행한다.
+두 가지 실행 방식을 지원한다.
 
-```yaml
-# infra/docker-compose.dev.yml
-services:
-  mongodb:
-    image: mongo:7
-    ports: ['27017:27017']
-  redis:
-    image: redis:7-alpine
-    ports: ['6379:6379']
-  kafka:
-    image: bitnami/kafka
-    ports: ['9092:9092']
-```
+### dev 모드 — 인프라만 Docker, 서비스는 IDE
 
 ```bash
-# 인프라 시작
-docker compose -f infra/docker-compose.dev.yml up -d
-
-# 서비스 실행 (IDE 또는 CLI)
-./gradlew :apps:auth:bootRun
+./scripts/infra.sh up dev           # MongoDB, Redis, Kafka
+./gradlew :apps:auth:bootRun        # Auth Service (8081)
+cd apps/fe && pnpm dev              # Vite dev server (5173)
 ```
+
+### test 모드 — 전체 Docker (Nginx 게이트웨이 포함)
+
+```bash
+./scripts/docker.sh build           # Docker 이미지 빌드
+./scripts/infra.sh up test          # 인프라 + 서비스 + Nginx (80)
+```
+
+`infra.sh`는 루트 `.env` 파일이 있으면 자동으로 `--env-file`로 주입한다.

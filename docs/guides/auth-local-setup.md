@@ -102,7 +102,9 @@ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:8081/a
 
 ## 6. Frontend 실행
 
-별도 터미널에서:
+로컬 개발과 Docker 테스트, 두 가지 방식이 있다.
+
+### 방법 A: Vite dev server (로컬 개발용)
 
 ```bash
 cd apps/fe
@@ -112,9 +114,24 @@ pnpm dev
 
 Vite dev server가 5173 포트에서 뜬다. `/auth/google/*` 경로는 Vite proxy가 자동으로 `http://localhost:8081`로 포워딩한다 (`vite.config.ts`).
 
+> **주의:** 이 방식은 Google OAuth redirect URI를 `http://localhost:5173/auth/google/callback`으로 설정해야 한다. `.env`의 `BARA_AUTH_GOOGLE_REDIRECT_URI`와 Google Console 모두 변경 필요.
+
+### 방법 B: Docker Compose (통합 테스트용)
+
+Nginx 게이트웨이를 포함한 전체 스택을 Docker로 실행한다.
+
+```bash
+./scripts/docker.sh build          # Docker 이미지 빌드 (auth, fe)
+./scripts/infra.sh up test         # 인프라 + 서비스 + Nginx 기동
+```
+
+`localhost:80`으로 접속한다. Nginx가 `/` → FE, `/auth/` → Auth Service로 라우팅한다. `.env`는 `infra.sh`가 자동으로 `--env-file`로 주입한다.
+
+> **이 방식이 기본이다.** `.env.example`의 redirect URI 기본값(`http://localhost/auth/google/callback`)은 이 구성에 맞춰져 있다.
+
 ## 7. End-to-End 테스트
 
-1. 브라우저에서 `http://localhost:5173/` 접속
+1. 브라우저에서 `http://localhost/` 접속 (Docker) 또는 `http://localhost:5173/` 접속 (Vite dev)
 2. **Login with Google** 클릭
 3. Google 로그인 페이지에서 계정 선택 및 동의
 4. `/me` 페이지로 자동 이동
