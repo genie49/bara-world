@@ -1,0 +1,215 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: asia-northeast3-docker.pkg.dev
+  REPOSITORY: bara-world/bara
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.filter.outputs.auth }}
+      fe: ${{ steps.filter.outputs.fe }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: filter
+        with:
+          filters: |
+            auth:
+              - 'apps/auth/**'
+              - 'libs/**'
+              - 'build-logic/**'
+              - 'gradle/**'
+              - 'settings.gradle.kts'
+              - 'build.gradle.kts'
+            fe:
+              - 'apps/fe/**'
+
+  build-push-auth:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+
+      - name: Build and push auth
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/auth/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/auth:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/auth:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-push-fe:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.fe == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+
+      - name: Build and push fe
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/fe/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/fe:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/fe:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [detect-changes, build-push-auth, build-push-fe]
+    if: always() && (needs.build-push-auth.result == 'success' || needs.build-push-fe.result == 'success')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Mask sensitive values
+        run: |
+          echo "::add-mask::${{ secrets.VM_HOST }}"
+
+      - name: Transfer manifests to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: "infra/k8s/"
+          target: "~/deploy"
+          strip_components: 0
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: asia-northeast3-docker.pkg.dev
+          REPOSITORY: bara-world/bara
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: IMAGE_TAG,REGISTRY,REPOSITORY
+          script: |
+            set -euo pipefail
+
+            # prod overlay의 이미지 태그를 현재 커밋 SHA로 덮어쓰기
+            cd ~/deploy/infra/k8s
+            cat > overlays/prod/kustomization.yaml <<KUST
+            apiVersion: kustomize.config.k8s.io/v1beta1
+            kind: Kustomization
+
+            resources:
+              - ../../base
+
+            images:
+              - name: bara/auth
+                newName: $REGISTRY/$REPOSITORY/auth
+                newTag: "$IMAGE_TAG"
+              - name: bara/fe
+                newName: $REGISTRY/$REPOSITORY/fe
+                newTag: "$IMAGE_TAG"
+
+            patches:
+              - target:
+                  kind: Deployment
+                  name: auth
+                  namespace: core
+                patch: |
+                  - op: add
+                    path: /spec/template/spec/containers/0/imagePullPolicy
+                    value: Always
+              - target:
+                  kind: Deployment
+                  name: fe
+                  namespace: core
+                patch: |
+                  - op: add
+                    path: /spec/template/spec/containers/0/imagePullPolicy
+                    value: Always
+              - target:
+                  kind: ConfigMap
+                  name: auth-config
+                  namespace: core
+                patch: |
+                  - op: replace
+                    path: /data/google-redirect-uri
+                    value: "https://bara.world/auth/google/callback"
+            KUST
+
+            # 매니페스트 적용
+            kubectl apply -k overlays/prod/
+
+            # Parameter Manager에서 시크릿 pull + K8s Secret 갱신
+            LATEST=$(gcloud parametermanager parameters versions list \
+              --parameter=bara-env-prod --location=global \
+              --sort-by=~createTime --limit=1 --format="value(name)")
+            VERSION_ID=$(basename "$LATEST")
+            gcloud parametermanager parameters versions describe "$VERSION_ID" \
+              --parameter=bara-env-prod --location=global \
+              --format="value(payload.data)" | base64 -d > /tmp/.env.prod
+
+            kubectl delete secret auth-secrets -n core --ignore-not-found
+            kubectl create secret generic auth-secrets -n core \
+              --from-env-file=/tmp/.env.prod
+            rm -f /tmp/.env.prod
+
+            # 배포 완료 대기
+            kubectl rollout status deployment/auth -n core --timeout=120s
+            kubectl rollout status deployment/fe -n core --timeout=120s
+
+            # 정리
+            rm -rf ~/deploy
+
+            echo "Deploy complete"

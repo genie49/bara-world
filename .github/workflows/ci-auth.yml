@@ -1,0 +1,39 @@
+name: CI — Auth
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "apps/auth/**"
+      - "libs/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - ".github/workflows/**"
+      - "infra/k8s/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test
+        run: ./gradlew :apps:auth:test
+
+      - name: Build
+        run: ./gradlew :apps:auth:bootJar

@@ -16,7 +16,6 @@ spec:
       containers:
         - name: auth
           image: bara/auth:latest
-          imagePullPolicy: Never
           ports:
             - containerPort: 8081
           env:

@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: bara/auth
+    newName: asia-northeast3-docker.pkg.dev/bara-world/bara/auth
+    newTag: latest
+  - name: bara/fe
+    newName: asia-northeast3-docker.pkg.dev/bara-world/bara/fe
+    newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: auth
+      namespace: core
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: Deployment
+      name: fe
+      namespace: core
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - target:
+      kind: ConfigMap
+      name: auth-config
+      namespace: core
+    patch: |
+      - op: replace
+        path: /data/google-redirect-uri
+        value: "https://bara.world/auth/google/callback"

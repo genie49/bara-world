@@ -16,7 +16,6 @@ spec:
       containers:
         - name: fe
           image: bara/fe:latest
-          imagePullPolicy: Never
           ports:
             - containerPort: 5173
           readinessProbe:
