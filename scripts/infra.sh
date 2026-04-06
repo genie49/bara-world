@@ -28,8 +28,12 @@ case "$ENV" in
     *)    usage ;;
 esac
 
+ENV_FILE="$PROJECT_ROOT/.env"
+COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
+[[ -f "$ENV_FILE" ]] && COMPOSE_CMD="$COMPOSE_CMD --env-file $ENV_FILE"
+
 case "$ACTION" in
-    up)   docker compose -f "$COMPOSE_FILE" up -d ;;
-    down) docker compose -f "$COMPOSE_FILE" down ;;
+    up)   $COMPOSE_CMD up -d ;;
+    down) $COMPOSE_CMD down ;;
     *)    usage ;;
 esac

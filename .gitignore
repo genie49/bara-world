@@ -13,5 +13,5 @@ build/
 *.pem
 
 # Frontend
-clients/web/dist/
-clients/web/.vite/
+apps/fe/dist/
+apps/fe/.vite/

@@ -2,7 +2,7 @@
 
 ## 개요
 
-Bara World Auth Service의 첫 기능 구현. Google OAuth 로그인을 통해 사용자를 인증하고 자체 RS256 JWT를 발급한다. React(Vite) 기반 프론트엔드를 `clients/web/`에 정식 구조로 함께 세팅하여 end-to-end 로그인 플로우를 검증한다.
+Bara World Auth Service의 첫 기능 구현. Google OAuth 로그인을 통해 사용자를 인증하고 자체 RS256 JWT를 발급한다. React(Vite) 기반 프론트엔드를 `apps/fe/`에 정식 구조로 함께 세팅하여 end-to-end 로그인 플로우를 검증한다.
 
 ## 범위
 
@@ -58,7 +58,7 @@ apps/auth/                          # 기존 Spring Boot 스캐폴딩에 추가
         ├── GoogleOAuthProperties.kt
         └── RestClientConfig.kt
 
-clients/web/                        # 신규 React SPA
+apps/fe/                        # 신규 React SPA
 ├── package.json
 ├── pnpm-lock.yaml
 ├── vite.config.ts
@@ -345,7 +345,7 @@ interface UserMongoDataRepository : MongoRepository<UserDocument, String> {
 
 `UserMongoRepository`가 `UserRepository`를 구현하고 내부적으로 `UserMongoDataRepository`를 위임 — 도메인 타입 ↔ Document 타입 변환 책임.
 
-## 프론트엔드 (clients/web)
+## 프론트엔드 (apps/fe)
 
 ### 스택
 
@@ -451,8 +451,8 @@ BARA_AUTH_GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
 ```
 .env
 *.pem
-clients/web/node_modules/
-clients/web/dist/
+apps/fe/node_modules/
+apps/fe/dist/
 ```
 
 ## 테스트 전략
@@ -472,7 +472,7 @@ clients/web/dist/
 - MongoDB Testcontainers 통합 테스트
 - Redis Testcontainers 통합 테스트
 
-### 프론트엔드 (clients/web)
+### 프론트엔드 (apps/fe)
 
 | 대상          | 유형 | 도구                                                      |
 | ------------- | ---- | --------------------------------------------------------- |
@@ -488,7 +488,7 @@ clients/web/dist/
 3. 같은 Google 계정으로 재로그인 시 MongoDB `users` 컬렉션에 중복 row 생성되지 않음 (googleId unique)
 4. `/me`에서 복사한 JWT를 [jwt.io](https://jwt.io)에서 decode 시 예상한 클레임 구조와 일치
 5. 백엔드/프론트엔드 모든 단위 테스트 통과
-6. `./gradlew :apps:auth:build` 성공, `pnpm --dir clients/web build` 성공
+6. `./gradlew :apps:auth:build` 성공, `pnpm --dir apps/fe build` 성공
 
 ## 후속 작업 (이번 iteration 제외)
 

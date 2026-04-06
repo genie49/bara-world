@@ -119,14 +119,14 @@ Auth Service 로컬 실행 가이드: [docs/guides/auth-local-setup.md](docs/gui
 기본 흐름:
 
 ```bash
-# 1. 인프라 (MongoDB, Redis, Kafka)
+# 로컬 개발 (인프라만 Docker, 서비스는 직접 실행)
 ./scripts/infra.sh up dev
+./gradlew :apps:auth:bootRun          # Auth Service (8081)
+cd apps/fe && pnpm install && pnpm dev # Vite dev server (5173)
 
-# 2. Auth Service
-./gradlew :apps:auth:bootRun
-
-# 3. Frontend
-cd clients/web && pnpm install && pnpm dev
+# 통합 테스트 (전체 Docker + Nginx 게이트웨이)
+./scripts/docker.sh build             # Docker 이미지 빌드
+./scripts/infra.sh up test            # localhost:80 접속
 ```
 
 Git 컨벤션: [docs/guides/git-convention.md](docs/guides/git-convention.md)

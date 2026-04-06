@@ -24,15 +24,32 @@ services:
       CLUSTER_ID: bara-test-cluster-001
 
   auth:
-    build:
-      context: ../
-      dockerfile: apps/auth/Dockerfile
-    ports:
-      - '8081:8081'
+    image: bara/auth:latest
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/bara-auth-test
+      SPRING_DATA_REDIS_HOST: redis
       SPRING_PROFILES_ACTIVE: test
+      BARA_AUTH_JWT_PRIVATE_KEY: ${BARA_AUTH_JWT_PRIVATE_KEY}
+      BARA_AUTH_JWT_PUBLIC_KEY: ${BARA_AUTH_JWT_PUBLIC_KEY}
+      BARA_AUTH_GOOGLE_CLIENT_ID: ${BARA_AUTH_GOOGLE_CLIENT_ID}
+      BARA_AUTH_GOOGLE_CLIENT_SECRET: ${BARA_AUTH_GOOGLE_CLIENT_SECRET}
+      BARA_AUTH_GOOGLE_REDIRECT_URI: ${BARA_AUTH_GOOGLE_REDIRECT_URI:-http://localhost/auth/google/callback}
     depends_on:
       - mongodb
       - redis
       - kafka
+
+  fe:
+    image: bara/fe:latest
+    depends_on:
+      - auth
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - fe
+      - auth
