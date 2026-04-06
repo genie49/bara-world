@@ -20,20 +20,21 @@
 
 | Namespace | Pod                                                                       |
 | --------- | ------------------------------------------------------------------------- |
-| `gateway` | nginx                                                                     |
+| `gateway` | Traefik (K3s 내장, Gateway API CRD)                                       |
 | `core`    | auth-service, api-service, fe-server, telegram-service, scheduler-service |
 | `data`    | mongodb, redis, kafka                                                     |
 | `logging` | fluent-bit (DaemonSet), loki, grafana                                     |
 
 ### 배포 단위
 
-| 유형        | 대상                                                                             | 이유                       |
-| ----------- | -------------------------------------------------------------------------------- | -------------------------- |
-| Deployment  | auth-service, api-service, fe-server, telegram-service, scheduler-service, nginx | 무상태, replicas 조절 가능 |
-| StatefulSet | mongodb, redis, kafka                                                            | 데이터 영속성 필요         |
-| DaemonSet   | fluent-bit                                                                       | 노드당 자동 1개            |
-| ConfigMap   | Nginx 설정                                                                       |                            |
-| Secret      | JWT 키, Provider 토큰 시크릿, Redis/Kafka 인증 정보                              |                            |
+| 유형        | 대상                                                                          | 이유                       |
+| ----------- | ----------------------------------------------------------------------------- | -------------------------- |
+| Deployment  | auth-service, api-service, fe-server, telegram-service, scheduler-service     | 무상태, replicas 조절 가능 |
+| StatefulSet | mongodb, redis, kafka                                                         | 데이터 영속성 필요         |
+| DaemonSet   | fluent-bit                                                                    | 노드당 자동 1개            |
+| Gateway     | K8s Gateway API (`gateway.yaml`)                                              | Traefik이 구현체           |
+| HTTPRoute   | 경로 라우팅 규칙 (`routes.yaml`)                                              | `/auth/**`, `/**` 분기     |
+| Secret      | JWT 키, Provider 토큰 시크릿, Redis/Kafka 인증 정보                           |                            |
 
 초기에는 모든 Deployment replicas를 1로 시작한다. 부하 발생 시 auth-service, api-service만 우선 스케일링.
 
@@ -41,8 +42,7 @@
 
 | 서비스            | 예상 메모리       |
 | ----------------- | ----------------- |
-| K3s 자체          | 512MB             |
-| Nginx             | 200MB             |
+| K3s 자체 + Traefik | 512MB            |
 | Auth Service      | 512MB             |
 | API Service       | 512MB             |
 | Redis             | 512MB             |
@@ -55,7 +55,7 @@
 | Loki              | 512MB             |
 | Grafana           | 512MB             |
 | OS + 오버헤드     | ~1,000MB          |
-| **합계**          | **~6.7GB / 24GB** |
+| **합계**          | **~6.5GB / 24GB** |
 
 > 실제 운영 시 JVM 힙, Kafka 페이지 캐시 등으로 추가 메모리가 사용될 수 있으므로 ~8GB 정도로 여유를 잡는다.
 
@@ -71,7 +71,7 @@
 - **모드: Full Strict**
 - Cloudflare ↔ 사용자: Cloudflare 인증서 (자동)
 - Cloudflare ↔ OCI VM: Origin 인증서 (Cloudflare 콘솔에서 발급, 무료, 최대 15년)
-- Nginx에 Origin 인증서 설치
+- Traefik에 Origin 인증서 설치
 
 ### 비용
 
@@ -86,25 +86,23 @@ Free 플랜으로 충분하다.
 - 9093 포트 (Kafka): 외부 Agent 서버용 오픈 (SASL + TLS 보호)
 - 나머지 포트: 외부 차단
 
-## Nginx 구성
+## Traefik + Gateway API 구성
 
-단일 Nginx Pod에서 경로 기반으로 라우팅한다. `/api`에서 User JWT와 Provider 토큰을 모두 처리한다.
+K3s에 내장된 Traefik이 게이트웨이 역할을 한다. 별도 Nginx Pod 없이 K8s Gateway API 리소스로 라우팅 규칙을 선언한다.
 
 ### 경로 기반 라우팅
 
-| 경로       | 인증 방식                                                         | 업스트림                  |
-| ---------- | ----------------------------------------------------------------- | ------------------------- |
-| `/`        | 없음 (정적 자산)                                                  | fe-server                 |
-| `/api`     | `auth_request` → `/validate` (User JWT / Provider 토큰 자동 판별) | api-service, auth-service |
-| `/grafana` | Cloudflare Access 또는 IP 제한                                    | grafana:3000              |
+| 경로                   | 매칭 방식   | 업스트림       |
+| ---------------------- | ----------- | -------------- |
+| `/auth/callback`       | Exact       | fe-server:5173 |
+| `/auth/**`             | PathPrefix  | auth:8081      |
+| `/**`                  | PathPrefix  | fe-server:5173 |
 
-### `auth_request` 흐름
+라우팅 규칙은 `infra/k8s/base/gateway/routes.yaml`(HTTPRoute)에 정의되며, `infra/k8s/base/gateway/gateway.yaml`(Gateway 리소스)이 Traefik을 진입점으로 선언한다.
 
-1. 클라이언트 요청 수신
-2. Nginx가 `/_auth` 내부 subrequest 발행 → Auth Service로 토큰 검증
-3. Auth Service가 `200 OK` + 검증된 헤더 반환
-4. Nginx가 **클라이언트 헤더를 초기화한 후** Auth Service 응답 헤더로 덮어씌움
-5. 업스트림으로 포워딩
+### 포트 바인딩
+
+ServiceLB(Klipper)가 LoadBalancer 타입 서비스를 처리하여 `localhost:80`에 직접 바인딩된다. (NodePort 불필요)
 
 > 인증 흐름 상세는 [인증 문서](../auth/authentication.md) 참고, 보안 상세는 [보안 문서](../shared/security.md) 참고.
 
@@ -112,7 +110,7 @@ Free 플랜으로 충분하다.
 
 | 포트  | 용도               | 접근 범위       |
 | ----- | ------------------ | --------------- |
-| 443   | HTTPS (Nginx)      | Cloudflare IP만 |
+| 443   | HTTPS (Traefik)    | Cloudflare IP만 |
 | 9093  | Kafka (TLS + SASL) | 외부 Agent 서버 |
 | 9092  | Kafka (내부, TLS)  | VM1 내부만      |
 | 27017 | MongoDB            | VM1 내부만      |

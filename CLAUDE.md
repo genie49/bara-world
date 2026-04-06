@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Google A2A(Agent-to-Agent) 프로토콜 기반 멀티 에이전트 플랫폼. Agent를 제외한 모든 서비스를 이 모노레포에서 관리한다.
 
-**Tech Stack:** Kotlin + Spring Boot (API/Auth), Apache Kafka (KRaft), MongoDB, Redis, K3s, Cloudflare, Nginx
+**Tech Stack:** Kotlin + Spring Boot (API/Auth), Apache Kafka (KRaft), MongoDB, Redis, K3s, Cloudflare, Traefik + K8s Gateway API
 
 ## Development Setup
 
@@ -66,7 +66,7 @@ Auth Service는 RSA 키쌍과 Google OAuth Client가 필요하다. 상세: [`doc
 1. `cp .env.example .env`
 2. `openssl`로 RSA 키쌍 생성 → base64 인코딩 → `.env`에 기입
 3. Google Cloud Console에서 OAuth 2.0 Client ID 생성, redirect URI에 `http://localhost/auth/google/callback` 추가 → `.env`에 기입
-4. `./scripts/docker.sh build` + `./scripts/infra.sh up test`
+4. `./scripts/docker.sh build` + `./scripts/k8s.sh create`
 5. `http://localhost/` 접속하여 Google 로그인 동작 확인
 
 `.env` 파일은 `apps/auth/build.gradle.kts`의 `bootRun` task가 읽어 환경변수로 주입한다 (별도 라이브러리 사용 안 함).

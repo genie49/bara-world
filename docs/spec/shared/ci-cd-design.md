@@ -108,8 +108,8 @@ infra/k8s/
       redis.yaml
       kafka.yaml
     gateway/
-      nginx.yaml
-      nginx.conf
+      gateway.yaml
+      routes.yaml
   overlays/
     dev/                   # k3d 로컬용
       kustomization.yaml   # imagePullPolicy: Never, 로컬 이미지 태그
@@ -146,7 +146,7 @@ infra/k8s/
 ### OCI VM 사전 셋업
 
 - **Host**: OCI Free Tier ARM (aarch64), Ubuntu 22.04
-- **K3s**: `--disable=traefik,servicelb --write-kubeconfig-mode=0644`
+- **K3s**: `--write-kubeconfig-mode=0644` (Traefik, ServiceLB 내장 사용 — 비활성화하지 않음)
 - **Docker**: gcloud auth configure-docker 용 (K3s 이미지 pull은 imagePullSecret 사용)
 - **gcloud CLI**: Parameter Manager 접근 + `gcloud auth configure-docker`
 - **kubectl**: K3s 심볼릭 링크 (`/usr/local/bin/kubectl` → `k3s`)
