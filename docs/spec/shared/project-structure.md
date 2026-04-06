@@ -21,12 +21,11 @@ bara-world/
 │   ├── python/
 │   └── typescript/
 ├── infra/                         # 인프라 설정
-│   ├── nginx/                     # ✓ Nginx 설정 파일
-│   ├── k8s/                       # ○ K3s 매니페스트
-│   ├── docker-compose.dev.yml     # ✓ 로컬 개발용 인프라
-│   └── docker-compose.test.yml    # ✓ 통합 테스트용 (인프라 + 서비스 + Nginx)
+│   ├── k8s/                       # ✓ K3s 매니페스트 (Kustomize)
+│   └── docker-compose.dev.yml     # ✓ 로컬 개발용 인프라
 ├── scripts/                       # 운영 스크립트
-│   ├── infra.sh                   # ✓ Docker Compose 관리 (up/down, dev/test)
+│   ├── infra.sh                   # ✓ Docker Compose 관리 (up/down, dev)
+│   ├── k8s.sh                     # ✓ k3d 클러스터 생성/삭제
 │   └── docker.sh                  # ✓ 서비스별 Docker 이미지 빌드/클린
 ├── docs/                          # 문서
 │   ├── spec/                      #   시스템 설계 문서
@@ -127,24 +126,25 @@ FE:          소스 → pnpm build → Docker multi-stage (Nginx) → K3s Pod
 ./scripts/docker.sh clean           # 전체 이미지 삭제
 ```
 
-빌드된 이미지는 `bara/<service>:latest` 태그가 붙는다. `infra/docker-compose.test.yml`에서 이 이미지를 참조한다.
+빌드된 이미지는 `bara/<service>:latest` 태그가 붙는다. `scripts/k8s.sh create` 시 k3d 클러스터에 로드되어 사용된다.
 
 ### K3s Pod 구성
 
-| Pod               | 이미지              | 비고                    |
-| ----------------- | ------------------- | ----------------------- |
-| auth-service      | 직접 빌드           | Spring Boot jar         |
-| api-service       | 직접 빌드           | Spring Boot jar         |
-| scheduler-service | 직접 빌드           | Spring Boot jar         |
-| fe                | 직접 빌드           | 웹 FE                   |
-| telegram-service  | 직접 빌드           | Telegram Bot            |
-| nginx             | `nginx:alpine`      | ConfigMap으로 설정 주입 |
-| mongodb           | `mongo:7`           | StatefulSet + PV        |
-| redis             | `redis:7-alpine`    |                         |
-| kafka             | `bitnami/kafka`     | KRaft 모드              |
-| fluent-bit        | `fluent/fluent-bit` | DaemonSet               |
-| loki              | `grafana/loki`      |                         |
-| grafana           | `grafana/grafana`   |                         |
+| Pod               | 이미지              | 비고                                     |
+| ----------------- | ------------------- | ---------------------------------------- |
+| auth-service      | 직접 빌드           | Spring Boot jar                          |
+| api-service       | 직접 빌드           | Spring Boot jar                          |
+| scheduler-service | 직접 빌드           | Spring Boot jar                          |
+| fe                | 직접 빌드           | 웹 FE                                    |
+| telegram-service  | 직접 빌드           | Telegram Bot                             |
+| mongodb           | `mongo:7`           | StatefulSet + PV                         |
+| redis             | `redis:7-alpine`    |                                          |
+| kafka             | `bitnami/kafka`     | KRaft 모드                               |
+| fluent-bit        | `fluent/fluent-bit` | DaemonSet                                |
+| loki              | `grafana/loki`      |                                          |
+| grafana           | `grafana/grafana`   |                                          |
+
+> 게이트웨이는 K3s에 내장된 Traefik이 담당한다. 별도 Nginx Pod 없이 K8s Gateway API(`gateway.yaml`, `routes.yaml`)로 라우팅 규칙을 선언한다.
 
 > 인프라 상세(VM, K3s, Cloudflare 등)는 [인프라 문서](infrastructure.md) 참고.
 
@@ -160,11 +160,11 @@ FE:          소스 → pnpm build → Docker multi-stage (Nginx) → K3s Pod
 cd apps/fe && pnpm dev              # Vite dev server (5173)
 ```
 
-### test 모드 — 전체 Docker (Nginx 게이트웨이 포함)
+### k3d 모드 — 전체 K8s (Traefik 게이트웨이 포함)
 
 ```bash
 ./scripts/docker.sh build           # Docker 이미지 빌드
-./scripts/infra.sh up test          # 인프라 + 서비스 + Nginx (80)
+./scripts/k8s.sh create             # k3d 클러스터 생성 + 매니페스트 적용 (80)
 ```
 
-`infra.sh`는 루트 `.env` 파일이 있으면 자동으로 `--env-file`로 주입한다.
+Traefik(K3s 내장)이 ServiceLB(Klipper)를 통해 `localhost:80`에 바인딩된다.

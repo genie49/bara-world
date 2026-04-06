@@ -46,7 +46,7 @@ Google A2A(Agent2Agent) 프로토콜 기반의 멀티 에이전트 플랫폼.
 ### 보안
 
 - Cloudflare Full Strict TLS
-- Nginx 헤더 초기화 후 재주입 (스푸핑 방지)
+- Traefik + K8s Gateway API 경로 기반 라우팅
 - Kafka SASL + ACL (토픽별 접근 제어)
 - JWT RS256 + JTI 1회용 (replay 방지)
 
@@ -71,7 +71,7 @@ Google A2A(Agent2Agent) 프로토콜 기반의 멀티 에이전트 플랫폼.
 | Messaging      | Apache Kafka (KRaft)                |
 | Database       | MongoDB                             |
 | Cache          | Redis                               |
-| Reverse Proxy  | Nginx                               |
+| Reverse Proxy  | Traefik (K3s 내장) + K8s Gateway API |
 | CDN / TLS      | Cloudflare (Free)                   |
 | Container      | K3s (단일 노드)                     |
 | Logging        | Fluent Bit → Kafka → Loki → Grafana |
@@ -87,7 +87,7 @@ Google A2A(Agent2Agent) 프로토콜 기반의 멀티 에이전트 플랫폼.
 | 문서                                                                    | 내용                                        |
 | ----------------------------------------------------------------------- | ------------------------------------------- |
 | [overview](docs/spec/overview.md)                                       | 전체 아키텍처, 구성 요소, 기술 스택         |
-| [shared/infrastructure](docs/spec/shared/infrastructure.md)             | VM, K3s, Cloudflare, Nginx, 네트워크        |
+| [shared/infrastructure](docs/spec/shared/infrastructure.md)             | VM, K3s, Cloudflare, Traefik, 네트워크      |
 | [shared/messaging](docs/spec/shared/messaging.md)                       | Kafka 통신, SSE, 에러, 스케줄, 태스크 수명  |
 | [shared/security](docs/spec/shared/security.md)                         | 위협 매트릭스, 계층별 대응, 우선순위 로드맵 |
 | [shared/logging](docs/spec/shared/logging.md)                           | 로그 파이프라인, Grafana, 알람              |
@@ -124,9 +124,9 @@ Auth Service 로컬 실행 가이드: [docs/guides/auth-local-setup.md](docs/gui
 ./gradlew :apps:auth:bootRun          # Auth Service (8081)
 cd apps/fe && pnpm install && pnpm dev # Vite dev server (5173)
 
-# 통합 테스트 (전체 Docker + Nginx 게이트웨이)
+# 통합 테스트 (k3d + Traefik 게이트웨이)
 ./scripts/docker.sh build             # Docker 이미지 빌드
-./scripts/infra.sh up test            # localhost:80 접속
+./scripts/k8s.sh create               # k3d 클러스터 생성 → localhost:80 접속
 ```
 
 Git 컨벤션: [docs/guides/git-convention.md](docs/guides/git-convention.md)
