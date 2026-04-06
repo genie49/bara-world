@@ -9,5 +9,4 @@ resources:
   - core/auth.yaml
   - core/fe.yaml
   - gateway/traefik-config.yaml
-  - gateway/gateway.yaml
   - gateway/routes.yaml

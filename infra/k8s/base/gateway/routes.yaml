@@ -5,8 +5,8 @@ metadata:
   namespace: core
 spec:
   parentRefs:
-    - name: bara-gateway
-      namespace: gateway
+    - name: traefik-gateway
+      namespace: kube-system
   rules:
     - matches:
         - path:
@@ -23,8 +23,8 @@ metadata:
   namespace: core
 spec:
   parentRefs:
-    - name: bara-gateway
-      namespace: gateway
+    - name: traefik-gateway
+      namespace: kube-system
   rules:
     - matches:
         - path:
@@ -41,8 +41,8 @@ metadata:
   namespace: core
 spec:
   parentRefs:
-    - name: bara-gateway
-      namespace: gateway
+    - name: traefik-gateway
+      namespace: kube-system
   rules:
     - matches:
         - path:
