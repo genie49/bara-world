@@ -146,7 +146,7 @@ infra/k8s/
 ### OCI VM 사전 셋업
 
 - **Host**: OCI Free Tier ARM (aarch64), Ubuntu 22.04
-- **K3s**: `--disable=traefik,servicelb --write-kubeconfig-mode=0644`
+- **K3s**: `--disable=traefik --write-kubeconfig-mode=0644` (ServiceLB 활성, Traefik 비활성)
 - **Docker**: gcloud auth configure-docker 용 (K3s 이미지 pull은 imagePullSecret 사용)
 - **gcloud CLI**: Parameter Manager 접근 + `gcloud auth configure-docker`
 - **kubectl**: K3s 심볼릭 링크 (`/usr/local/bin/kubectl` → `k3s`)
