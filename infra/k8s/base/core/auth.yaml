@@ -27,22 +27,22 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: auth-secrets
-                  key: jwt-private-key
+                  key: BARA_AUTH_JWT_PRIVATE_KEY
             - name: BARA_AUTH_JWT_PUBLIC_KEY
               valueFrom:
                 secretKeyRef:
                   name: auth-secrets
-                  key: jwt-public-key
+                  key: BARA_AUTH_JWT_PUBLIC_KEY
             - name: BARA_AUTH_GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
                   name: auth-secrets
-                  key: google-client-id
+                  key: BARA_AUTH_GOOGLE_CLIENT_ID
             - name: BARA_AUTH_GOOGLE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: auth-secrets
-                  key: google-client-secret
+                  key: BARA_AUTH_GOOGLE_CLIENT_SECRET
             - name: BARA_AUTH_GOOGLE_REDIRECT_URI
               valueFrom:
                 configMapKeyRef:
@@ -81,11 +81,6 @@ metadata:
 data:
   google-redirect-uri: "http://localhost/auth/google/callback"
 ---
-# Secret은 직접 apply하거나 CI/CD에서 주입한다.
-# 아래는 구조 참고용. 실제 값은 base64 인코딩하여 채운다.
-#
-# kubectl create secret generic auth-secrets -n core \
-#   --from-literal=jwt-private-key="<base64-encoded-pem>" \
-#   --from-literal=jwt-public-key="<base64-encoded-pem>" \
-#   --from-literal=google-client-id="<client-id>" \
-#   --from-literal=google-client-secret="<client-secret>"
+# Secret은 .env 파일에서 자동 생성된다.
+# 로컬: scripts/k8s.sh → --from-env-file=.env
+# CI/CD: deploy.yml → --from-env-file=.env.prod (GCP Parameter Manager에서 pull)

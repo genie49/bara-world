@@ -43,12 +43,8 @@ create_secrets() {
         return
     fi
 
-    source "$env_file"
     kubectl create secret generic auth-secrets -n core \
-        --from-literal=jwt-private-key="$BARA_AUTH_JWT_PRIVATE_KEY" \
-        --from-literal=jwt-public-key="$BARA_AUTH_JWT_PUBLIC_KEY" \
-        --from-literal=google-client-id="$BARA_AUTH_GOOGLE_CLIENT_ID" \
-        --from-literal=google-client-secret="$BARA_AUTH_GOOGLE_CLIENT_SECRET"
+        --from-env-file="$env_file"
     echo "  ✓ auth-secrets 생성 완료"
 }
 
