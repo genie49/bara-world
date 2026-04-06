@@ -21,6 +21,10 @@ patches:
       - op: add
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Always
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: registry-credentials
   - target:
       kind: Deployment
       name: fe
@@ -29,6 +33,10 @@ patches:
       - op: add
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Always
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: registry-credentials
   - target:
       kind: ConfigMap
       name: auth-config
