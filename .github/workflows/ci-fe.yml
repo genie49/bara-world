@@ -5,6 +5,8 @@ on:
     branches: [develop, main]
     paths:
       - "apps/fe/**"
+      - ".github/workflows/**"
+      - "infra/k8s/**"
 
 permissions:
   contents: read

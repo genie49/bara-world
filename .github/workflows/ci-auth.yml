@@ -10,6 +10,8 @@ on:
       - "gradle/**"
       - "settings.gradle.kts"
       - "build.gradle.kts"
+      - ".github/workflows/**"
+      - "infra/k8s/**"
 
 permissions:
   contents: read
