@@ -31,20 +31,21 @@ cd apps/fe && pnpm install && pnpm dev
 - 서비스 빌드는 Gradle 멀티 프로젝트 (`settings.gradle.kts`에 모듈 등록).
 - **JDK 21 필수**. Gradle daemon은 `gradle/gradle-daemon-jvm.properties`로 자동 선택.
 
-### Docker 빌드 & 통합 테스트
+### Docker 빌드 & K8s 로컬 테스트
 
 ```bash
 ./scripts/docker.sh build           # 전체 Docker 이미지 빌드 (auth, fe)
 ./scripts/docker.sh build auth      # 개별 빌드
 ./scripts/docker.sh clean           # 이미지 삭제
 
-./scripts/infra.sh up test          # 인프라 + 서비스 + Nginx (localhost:80)
-./scripts/infra.sh down test        # 전체 중지
+./scripts/k8s.sh create             # k3d 클러스터 생성 + 이미지 로드 + 배포 (localhost:80)
+./scripts/k8s.sh stop               # 클러스터 중지
+./scripts/k8s.sh start              # 클러스터 재시작
+./scripts/k8s.sh delete             # 클러스터 삭제
 ```
 
-- `docker.sh`로 빌드된 `bara/<service>:latest` 이미지를 `docker-compose.test.yml`이 참조.
-- `infra.sh`는 루트 `.env` 파일을 자동으로 `--env-file`로 주입.
-- Nginx 게이트웨이 설정: `infra/nginx/nginx.conf` (`/` → fe, `/auth/` → auth).
+- 게이트웨이: Traefik (K3s 내장) + Gateway API (`infra/k8s/base/gateway/`)
+- 로컬 인프라(MongoDB, Redis, Kafka)만 필요 시: `./scripts/infra.sh up`
 
 ### CI/CD
 
