@@ -40,6 +40,8 @@ tasks.register<Test>("e2eTest") {
     testClassesDirs = e2eTestSourceSet.output.classesDirs
     classpath = e2eTestSourceSet.runtimeClasspath
     useJUnitPlatform()
+    // Allow reflection access to java.net.HttpURLConnection for PATCH method support
+    jvmArgs("--add-opens", "java.base/java.net=ALL-UNNAMED")
 }
 // ──────────────────────────────────────────────────────────────────
 

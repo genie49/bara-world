@@ -43,6 +43,13 @@ abstract class E2eTestBase {
         val redis: GenericContainer<*> = GenericContainer("redis:7-alpine")
             .withExposedPorts(6379)
 
+        init {
+            // Eagerly start containers so that DynamicPropertySource can access mapped ports
+            // even when @TestInstance(PER_CLASS) changes the extension lifecycle ordering.
+            mongo.start()
+            redis.start()
+        }
+
         @JvmStatic
         @DynamicPropertySource
         fun containerProperties(registry: DynamicPropertyRegistry) {
