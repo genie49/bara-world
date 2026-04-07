@@ -35,7 +35,7 @@ export default function ProviderPage() {
   }, [])
 
   async function loadProvider() {
-    const res = await apiFetch('/auth/provider')
+    const res = await apiFetch('/api/auth/provider')
     if (res.status === 404) {
       setState({ kind: 'unregistered' })
       return
@@ -52,7 +52,7 @@ export default function ProviderPage() {
   }
 
   async function loadApiKeys() {
-    const res = await apiFetch('/auth/provider/api-key')
+    const res = await apiFetch('/api/auth/provider/api-key')
     if (res.ok) {
       const data = await res.json()
       setApiKeys(data.keys)
@@ -60,7 +60,7 @@ export default function ProviderPage() {
   }
 
   async function register() {
-    const res = await apiFetch('/auth/provider/register', {
+    const res = await apiFetch('/api/auth/provider/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'default' }),
@@ -72,7 +72,7 @@ export default function ProviderPage() {
 
   async function issueApiKey() {
     if (!newKeyName.trim()) return
-    const res = await apiFetch('/auth/provider/api-key', {
+    const res = await apiFetch('/api/auth/provider/api-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newKeyName }),
@@ -88,7 +88,7 @@ export default function ProviderPage() {
 
   async function updateKeyName(keyId: string) {
     if (!editName.trim()) return
-    const res = await apiFetch(`/auth/provider/api-key/${keyId}`, {
+    const res = await apiFetch(`/api/auth/provider/api-key/${keyId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: editName }),
@@ -102,7 +102,7 @@ export default function ProviderPage() {
 
   async function deleteKey(keyId: string) {
     if (!confirm('이 API Key를 삭제하시겠습니까? 즉시 사용이 차단됩니다.')) return
-    const res = await apiFetch(`/auth/provider/api-key/${keyId}`, { method: 'DELETE' })
+    const res = await apiFetch(`/api/auth/provider/api-key/${keyId}`, { method: 'DELETE' })
     if (res.ok) {
       loadApiKeys()
     }
