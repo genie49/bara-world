@@ -114,6 +114,11 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 - `WideEvent.put()` — 구조화 필드, `WideEvent.message()` — 사람이 읽을 수 있는 로그 메시지
 - 새 port/adapter/엔드포인트 추가 시 반드시 `docs/guides/logging/README.md` 참조
 - 해당 흐름의 비즈니스 컨텍스트 로깅 필드를 정의하고 `docs/guides/logging/flows/`에 문서 추가
+- **PR 전 로깅 체크리스트:**
+  - 새 엔드포인트/흐름에 `WideEvent.put()` + `WideEvent.message()` 추가했는가?
+  - `outcome` 필드가 성공/실패 경로 모두에 설정되었는가?
+  - `user_id` 등 비즈니스 컨텍스트 필드가 포함되었는가?
+  - `docs/guides/logging/flows/`에 해당 흐름 문서를 추가/업데이트했는가?
 
 ## Architecture
 

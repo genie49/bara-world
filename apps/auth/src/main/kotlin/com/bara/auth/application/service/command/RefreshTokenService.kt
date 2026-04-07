@@ -20,11 +20,16 @@ class RefreshTokenService(
         val stored = refreshTokenStore.find(claims.userId)
             ?: throw InvalidTokenException("Refresh token not found")
 
+        WideEvent.put("user_id", claims.userId)
+        WideEvent.put("token_family", stored.family)
+
         if (claims.jti != stored.jti) {
             if (refreshTokenStore.isGraceValid(claims.jti)) {
+                WideEvent.put("grace_period_used", true)
                 WideEvent.message("Grace period 내 이전 Refresh Token 사용 허용")
             } else {
                 WideEvent.put("reuse_detected_family", stored.family)
+                WideEvent.put("outcome", "reuse_detected")
                 WideEvent.message("Refresh Token 재사용 감지 — family 무효화")
                 refreshTokenStore.delete(claims.userId)
                 throw InvalidTokenException("Refresh token reuse detected")
@@ -41,7 +46,8 @@ class RefreshTokenService(
         refreshTokenStore.saveGrace(claims.jti)
         refreshTokenStore.save(claims.userId, newClaims.jti, stored.family)
 
-        WideEvent.put("user_id", user.id)
+        WideEvent.put("user_email", user.email)
+        WideEvent.put("outcome", "token_refreshed")
         WideEvent.message("토큰 갱신 성공")
 
         return TokenPair(accessToken = newAccessToken, refreshToken = newRefreshToken)
