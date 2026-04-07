@@ -4,11 +4,11 @@
 
 이 시스템에는 3가지 인증 주체가 존재한다.
 
-| 주체                    | 인증 방식                          | 발급 토큰                                    | 주입 헤더                   |
-| ----------------------- | ---------------------------------- | -------------------------------------------- | --------------------------- |
-| User (사람)             | Google OAuth → Access/Refresh Token | Access Token (1시간) + Refresh Token (7일)   | `X-User-Id`, `X-User-Role` |
-| Provider (Agent 운영자) | Auth Service 등록 → API Key        | API Key (SHA-256 해시)                       | `X-Provider-Id`             |
-| Kafka 접근              | API Key → 단기 토큰 교환           | Kafka Access Token (1시간)                   | — (SASL OAUTHBEARER)        |
+| 주체                    | 인증 방식                           | 발급 토큰                                  | 주입 헤더                  |
+| ----------------------- | ----------------------------------- | ------------------------------------------ | -------------------------- |
+| User (사람)             | Google OAuth → Access/Refresh Token | Access Token (1시간) + Refresh Token (7일) | `X-User-Id`, `X-User-Role` |
+| Provider (Agent 운영자) | Auth Service 등록 → API Key         | API Key (SHA-256 해시)                     | `X-Provider-Id`            |
+| Kafka 접근              | API Key → 단기 토큰 교환            | Kafka Access Token (1시간)                 | — (SASL OAUTHBEARER)       |
 
 ## Auth Service
 
@@ -23,19 +23,20 @@ Auth Service는 모든 인증/인가를 중앙에서 담당한다.
 
 ### 엔드포인트
 
-| 엔드포인트                              | 용도                                                                       |
-| --------------------------------------- | -------------------------------------------------------------------------- |
-| `POST /auth/google/login`               | Google OAuth 로그인 시작                                                   |
-| `GET /auth/google/callback`             | Google OAuth 콜백 → Access/Refresh Token 발급                              |
-| `POST /auth/refresh`                    | Refresh Token으로 Access/Refresh 재발급                                    |
-| `POST /auth/provider/register`          | Provider 가입                                                              |
-| `POST /auth/provider/api-key`           | API Key 발급                                                               |
-| `GET /auth/provider/api-key`            | API Key 목록 조회                                                          |
-| `PATCH /auth/provider/api-key/{keyId}`  | API Key 이름 수정                                                          |
-| `DELETE /auth/provider/api-key/{keyId}` | API Key 폐기                                                               |
-| `POST /auth/kafka/token`                | Kafka Access Token 발급 (OAUTHBEARER)                                      |
-| `GET /validate`                         | Nginx `auth_request` — 토큰 타입 자동 판별 (User Access Token / API Key)   |
-| `GET /auth/.well-known/jwks.json`       | JWKS 공개키 (Kafka 브로커 토큰 검증용)                                     |
+| 엔드포인트                              | 용도                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `POST /auth/google/login`               | Google OAuth 로그인 시작                                                 |
+| `GET /auth/google/callback`             | Google OAuth 콜백 → Access/Refresh Token 발급                            |
+| `POST /auth/refresh`                    | Refresh Token으로 Access/Refresh 재발급                                  |
+| `GET /auth/provider`                    | 현재 사용자의 Provider 정보 조회                                         |
+| `POST /auth/provider/register`          | Provider 가입                                                            |
+| `POST /auth/provider/api-key`           | API Key 발급                                                             |
+| `GET /auth/provider/api-key`            | API Key 목록 조회                                                        |
+| `PATCH /auth/provider/api-key/{keyId}`  | API Key 이름 수정                                                        |
+| `DELETE /auth/provider/api-key/{keyId}` | API Key 폐기                                                             |
+| `POST /auth/kafka/token`                | Kafka Access Token 발급 (OAUTHBEARER)                                    |
+| `GET /validate`                         | Nginx `auth_request` — 토큰 타입 자동 판별 (User Access Token / API Key) |
+| `GET /auth/.well-known/jwks.json`       | JWKS 공개키 (Kafka 브로커 토큰 검증용)                                   |
 
 ## User 인증 흐름
 
@@ -154,20 +155,20 @@ sequenceDiagram
 | 필드       | 설명                              |
 | ---------- | --------------------------------- |
 | id         | Provider 식별자                   |
-| userId     | 등록한 User ID (1:1 관계)        |
+| userId     | 등록한 User ID (1:1 관계)         |
 | name       | Provider 이름                     |
 | status     | 상태 (PENDING, ACTIVE, SUSPENDED) |
 | created_at | 등록 시간                         |
 
 ### ApiKey
 
-| 필드       | 설명                                       |
-| ---------- | ------------------------------------------ |
-| id         | API Key 식별자                             |
-| providerId | 소속 Provider ID                           |
-| name       | 키 이름 (e.g. "Production", "Staging")     |
-| keyHash    | SHA-256 단방향 해시                         |
-| keyPrefix  | 앞 8자 (식별용, e.g. "bk_a3f2e1")          |
-| created_at | 발급 시간                                  |
+| 필드       | 설명                                   |
+| ---------- | -------------------------------------- |
+| id         | API Key 식별자                         |
+| providerId | 소속 Provider ID                       |
+| name       | 키 이름 (e.g. "Production", "Staging") |
+| keyHash    | SHA-256 단방향 해시                    |
+| keyPrefix  | 앞 8자 (식별용, e.g. "bk_a3f2e1")      |
+| created_at | 발급 시간                              |
 
 `api_keys` 컬렉션에 별도 저장. `keyHash`에 unique index, `providerId`에 index. Provider당 최대 5개.
