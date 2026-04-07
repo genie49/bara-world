@@ -1,5 +1,7 @@
 package com.bara.auth
 
+import com.bara.auth.adapter.out.persistence.ApiKeyMongoDataRepository
+import com.bara.auth.adapter.out.persistence.ProviderMongoDataRepository
 import com.bara.auth.adapter.out.persistence.UserMongoDataRepository
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
@@ -37,6 +39,12 @@ class HealthCheckTest {
 
     @MockkBean
     lateinit var userMongoDataRepository: UserMongoDataRepository
+
+    @MockkBean
+    lateinit var providerMongoDataRepository: ProviderMongoDataRepository
+
+    @MockkBean
+    lateinit var apiKeyMongoDataRepository: ApiKeyMongoDataRepository
 
     @MockkBean
     lateinit var stringRedisTemplate: StringRedisTemplate
