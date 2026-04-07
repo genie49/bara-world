@@ -167,7 +167,12 @@ jobs:
               --docker-username=oauth2accesstoken \
               --docker-password="$TOKEN"
 
-            # 2. 매니페스트 동기화 (레포의 prod overlay 그대로 적용)
+            # 2. Traefik Gateway API 설정 (K3s manifests 디렉토리에 배치)
+            sudo cp ~/deploy/infra/k8s/base/gateway/traefik-config.yaml \
+              /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+            sleep 10
+
+            # 3. 매니페스트 동기화 (레포의 prod overlay 그대로 적용)
             cd ~/deploy/infra/k8s
             kubectl apply -k overlays/prod/
 
