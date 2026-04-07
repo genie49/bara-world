@@ -179,7 +179,7 @@ jobs:
             # 3. Parameter Manager에서 시크릿 pull + K8s Secret 갱신
             LATEST=$(gcloud parametermanager parameters versions list \
               --parameter=bara-env-prod --location=global \
-              --sort-by=~createTime --limit=1 --format="value(name)")
+              --sort-by=createTime --format="value(name)" | tail -1)
             VERSION_ID=$(basename "$LATEST")
             gcloud parametermanager parameters versions describe "$VERSION_ID" \
               --parameter=bara-env-prod --location=global \
