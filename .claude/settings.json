@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*--no-verify*)",
+            "command": "echo 'git commit --no-verify는 허용되지 않습니다. Husky hooks를 우회할 수 없습니다.' >&2 && exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}
