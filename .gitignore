@@ -16,3 +16,6 @@ build/
 # Frontend
 apps/fe/dist/
 apps/fe/.vite/
+
+# Worktrees
+.worktrees/
