@@ -8,4 +8,5 @@ resources:
   - data/kafka.yaml
   - core/auth.yaml
   - core/fe.yaml
+  - gateway/middlewares.yaml
   - gateway/routes.yaml

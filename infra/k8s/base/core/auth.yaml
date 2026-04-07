@@ -20,9 +20,9 @@ spec:
             - containerPort: 8081
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: "mongodb://mongodb.data.svc.cluster.local:27017/bara-auth"
+              value: 'mongodb://mongodb.data.svc.cluster.local:27017/bara-auth'
             - name: SPRING_DATA_REDIS_HOST
-              value: "redis.data.svc.cluster.local"
+              value: 'redis.data.svc.cluster.local'
             - name: BARA_AUTH_JWT_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
@@ -49,18 +49,18 @@ spec:
                   name: auth-secrets
                   key: BARA_AUTH_GOOGLE_REDIRECT_URI
             - name: APP_VERSION
-              value: "local"
+              value: 'local'
             - name: SERVICE_NAME
-              value: "bara-auth"
+              value: 'bara-auth'
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /api/auth/actuator/health/readiness
               port: 8081
             initialDelaySeconds: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness
+              path: /api/auth/actuator/health/liveness
               port: 8081
             initialDelaySeconds: 60
             periodSeconds: 30
