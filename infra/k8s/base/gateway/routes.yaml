@@ -7,7 +7,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: PathPrefix(`/api/auth/google`) || Path(`/api/auth/refresh`) || Path(`/api/auth/validate`)
+    - match: PathPrefix(`/api/auth/google`) || Path(`/api/auth/refresh`) || Path(`/api/auth/validate`) || PathPrefix(`/api/auth/swagger-ui`) || PathPrefix(`/api/auth/v3/api-docs`)
       kind: Rule
       middlewares:
         - name: cors
