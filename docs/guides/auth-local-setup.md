@@ -162,5 +162,5 @@ docker exec -it $(docker ps -qf name=mongo) mongosh bara-auth --eval 'db.users.f
 ## 관련 문서
 
 - [git-convention.md](git-convention.md) — 커밋/브랜치 컨벤션
-- [../spec/auth/authentication.md](../spec/auth/authentication.md) — Auth Service 전체 설계 (Provider 토큰, Kafka 토큰 등 포함)
+- [../spec/auth/authentication.md](../spec/auth/authentication.md) — Auth Service 전체 설계 (Provider API Key, Kafka 토큰 등 포함)
 - [../superpowers/specs/2026-04-05-auth-google-oauth-jwt-design.md](../superpowers/specs/2026-04-05-auth-google-oauth-jwt-design.md) — 이번 구현의 상세 설계 및 범위

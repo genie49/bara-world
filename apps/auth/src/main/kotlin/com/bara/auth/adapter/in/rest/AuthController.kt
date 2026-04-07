@@ -32,10 +32,10 @@ class AuthController(
         @RequestParam code: String,
         @RequestParam state: String,
     ): ResponseEntity<Void> {
-        val jwt = useCase.login(code = code, state = state)
+        val tokenPair = useCase.login(code = code, state = state)
         WideEvent.put("outcome", "success")
         WideEvent.message("Google OAuth 콜백 성공")
-        return redirect("${frontendCallbackBase()}?token=$jwt")
+        return redirect("${frontendCallbackBase()}?token=${tokenPair.accessToken}&refreshToken=${tokenPair.refreshToken}")
     }
 
     private fun redirect(url: String): ResponseEntity<Void> {

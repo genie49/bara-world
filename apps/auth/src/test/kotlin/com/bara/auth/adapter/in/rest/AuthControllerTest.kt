@@ -3,6 +3,7 @@ package com.bara.auth.adapter.`in`.rest
 import com.bara.auth.application.port.`in`.command.LoginWithGoogleUseCase
 import com.bara.auth.config.GoogleOAuthProperties
 import com.bara.auth.domain.exception.GoogleExchangeFailedException
+import com.bara.auth.domain.model.TokenPair
 import com.bara.auth.domain.exception.InvalidIdTokenException
 import com.bara.auth.domain.exception.InvalidOAuthStateException
 import com.ninjasquad.springmockk.MockkBean
@@ -47,14 +48,14 @@ class AuthControllerTest {
 
     @Test
     fun `GET auth google callback 성공 시 FE로 토큰과 함께 302`() {
-        every { useCase.login("code-1", "state-1") } returns "jwt.token.xxx"
+        every { useCase.login("code-1", "state-1") } returns TokenPair(accessToken = "jwt.token.xxx", refreshToken = "refresh.token.xxx")
 
         mockMvc.get("/auth/google/callback") {
             param("code", "code-1")
             param("state", "state-1")
         }.andExpect {
             status { isFound() }
-            header { string("Location", "http://localhost:5173/auth/callback?token=jwt.token.xxx") }
+            header { string("Location", "http://localhost:5173/auth/callback?token=jwt.token.xxx&refreshToken=refresh.token.xxx") }
         }
     }
 

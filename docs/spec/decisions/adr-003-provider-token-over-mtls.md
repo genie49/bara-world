@@ -1,5 +1,7 @@
 # ADR-003: mTLS / API Key 대신 Provider 토큰 방식 선택
 
+> **SUPERSEDED** — 이 ADR의 Provider JWT 방식은 API Key 방식으로 변경되었다. 변경 이유: 즉시 폐기 가능, 복수 키 지원 (Provider당 최대 5개), 단순한 검증 (SHA-256 해시 조회). 상세 설계: `docs/superpowers/specs/2026-04-07-provider-auth-design.md`
+
 - **상태**: 채택
 - **일자**: 2026-04-03
 

@@ -139,7 +139,7 @@ sequenceDiagram
     participant Mongo as MongoDB
     participant K as Kafka
 
-    P->>R: POST /agents<br/>Authorization: Bearer {provider_token}<br/>Body: { name, skills, agent_card }
+    P->>R: POST /agents<br/>Authorization: Bearer {api_key}<br/>Body: { name, skills, agent_card }
 
     R->>R: Agent Card 검증 (필수 필드, 서명)
     R->>Mongo: Agent + Agent Card 영구 저장 → agent_id 발급
@@ -167,7 +167,7 @@ sequenceDiagram
 
 | 검증 항목                 | 실패 시          |
 | ------------------------- | ---------------- |
-| Provider 토큰 유효        | 401 Unauthorized |
+| API Key 유효              | 401 Unauthorized |
 | Provider status가 ACTIVE  | 403 Forbidden    |
 | Agent Card 필수 필드 포함 | 등록 거부        |
 | Agent Card 서명 검증 통과 | 등록 거부        |

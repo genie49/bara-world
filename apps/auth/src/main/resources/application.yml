@@ -35,6 +35,10 @@ bara:
       expiry-seconds: 3600
       private-key-base64: ${BARA_AUTH_JWT_PRIVATE_KEY:}
       public-key-base64: ${BARA_AUTH_JWT_PUBLIC_KEY:}
+    refresh-token:
+      audience: bara-refresh
+      expiry-seconds: 604800
+      grace-period-seconds: 30
     google:
       client-id: ${BARA_AUTH_GOOGLE_CLIENT_ID:}
       client-secret: ${BARA_AUTH_GOOGLE_CLIENT_SECRET:}

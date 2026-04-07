@@ -4,6 +4,7 @@ import com.bara.auth.config.GoogleOAuthProperties
 import com.bara.auth.domain.exception.GoogleExchangeFailedException
 import com.bara.auth.domain.exception.InvalidIdTokenException
 import com.bara.auth.domain.exception.InvalidOAuthStateException
+import com.bara.auth.domain.exception.InvalidTokenException
 import com.bara.common.logging.WideEvent
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -39,6 +40,14 @@ class AuthExceptionHandler(
         WideEvent.put("outcome", "invalid_id_token")
         WideEvent.message("ID token 검증 실패")
         return redirectWithError("invalid_id_token")
+    }
+
+    @ExceptionHandler(InvalidTokenException::class)
+    fun handleInvalidToken(): ResponseEntity<Void> {
+        WideEvent.put("error_type", "InvalidTokenException")
+        WideEvent.put("outcome", "invalid_token")
+        WideEvent.message("토큰 검증 실패")
+        return ResponseEntity(HttpStatus.UNAUTHORIZED)
     }
 
     private fun redirectWithError(code: String): ResponseEntity<Void> {

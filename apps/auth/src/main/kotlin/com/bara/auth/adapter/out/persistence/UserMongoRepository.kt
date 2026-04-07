@@ -11,6 +11,9 @@ class UserMongoRepository(
     override fun findByGoogleId(googleId: String): User? =
         dataRepository.findByGoogleId(googleId)?.toDomain()
 
+    override fun findById(id: String): User? =
+        dataRepository.findById(id).orElse(null)?.toDomain()
+
     override fun save(user: User): User =
         dataRepository.save(UserDocument.fromDomain(user)).toDomain()
 }
