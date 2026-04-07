@@ -53,6 +53,7 @@ create_cluster() {
     echo "──── k3d 클러스터 생성 ────"
     k3d cluster create "$CLUSTER_NAME" \
         --port "80:80@loadbalancer" \
+        --volume "$K8S_DIR/base/gateway/traefik-config.yaml:/var/lib/rancher/k3s/server/manifests/traefik-config.yaml@server:0" \
         --wait
 
     load_images
@@ -90,8 +91,10 @@ apply_manifests() {
         echo "  ⚠ 클러스터에 연결할 수 없음. 먼저 ./scripts/k8s.sh start 실행"
         exit 1
     fi
-    kubectl apply -f "$K8S_DIR/base/gateway/traefik-config.yaml"
-    sleep 5
+    echo "  Gateway API CRD 대기 중..."
+    until kubectl get crd httproutes.gateway.networking.k8s.io &>/dev/null; do
+        sleep 2
+    done
     kubectl apply -k "$K8S_DIR/overlays/dev/"
     create_secrets
     echo "✓ 매니페스트 적용 완료"

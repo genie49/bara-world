@@ -11,6 +11,5 @@ spec:
     gateway:
       listeners:
         web:
-          port: 80
-          protocol: HTTP
-          namespacePolicy: All
+          namespacePolicy:
+            from: All
