@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - data-nodeport.yaml
 
 images:
   - name: bara/auth
