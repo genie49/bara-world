@@ -109,6 +109,6 @@ class AuthExceptionHandler(
     }
 
     private fun frontendCallbackBase(): String {
-        return googleProps.redirectUri.replace("/auth/google/callback", "/auth/callback")
+        return googleProps.redirectUri.replace("/api/auth/google/callback", "/auth/callback")
     }
 }

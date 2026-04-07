@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.net.URI
 
 @RestController
-@RequestMapping("/auth/google")
+@RequestMapping("/google")
 class AuthController(
     private val useCase: LoginWithGoogleUseCase,
     private val googleProps: GoogleOAuthProperties,
@@ -44,5 +44,5 @@ class AuthController(
     }
 
     private fun frontendCallbackBase(): String =
-        googleProps.redirectUri.replace("/auth/google/callback", "/auth/callback")
+        googleProps.redirectUri.replace("/api/auth/google/callback", "/auth/callback")
 }

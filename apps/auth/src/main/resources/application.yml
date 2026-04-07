@@ -11,6 +11,8 @@ spring:
 
 server:
   port: 8081
+  servlet:
+    context-path: /api/auth
 
 management:
   endpoints:
@@ -42,4 +44,4 @@ bara:
     google:
       client-id: ${BARA_AUTH_GOOGLE_CLIENT_ID:}
       client-secret: ${BARA_AUTH_GOOGLE_CLIENT_SECRET:}
-      redirect-uri: ${BARA_AUTH_GOOGLE_REDIRECT_URI:http://localhost:5173/auth/google/callback}
+      redirect-uri: ${BARA_AUTH_GOOGLE_REDIRECT_URI:http://localhost:5173/api/auth/google/callback}

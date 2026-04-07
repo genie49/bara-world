@@ -23,20 +23,20 @@ Auth Service는 모든 인증/인가를 중앙에서 담당한다.
 
 ### 엔드포인트
 
-| 엔드포인트                              | 용도                                                                     |
-| --------------------------------------- | ------------------------------------------------------------------------ |
-| `POST /auth/google/login`               | Google OAuth 로그인 시작                                                 |
-| `GET /auth/google/callback`             | Google OAuth 콜백 → Access/Refresh Token 발급                            |
-| `POST /auth/refresh`                    | Refresh Token으로 Access/Refresh 재발급                                  |
-| `GET /auth/provider`                    | 현재 사용자의 Provider 정보 조회                                         |
-| `POST /auth/provider/register`          | Provider 가입                                                            |
-| `POST /auth/provider/api-key`           | API Key 발급                                                             |
-| `GET /auth/provider/api-key`            | API Key 목록 조회                                                        |
-| `PATCH /auth/provider/api-key/{keyId}`  | API Key 이름 수정                                                        |
-| `DELETE /auth/provider/api-key/{keyId}` | API Key 폐기                                                             |
-| `POST /auth/kafka/token`                | Kafka Access Token 발급 (OAUTHBEARER)                                    |
-| `GET /validate`                         | Nginx `auth_request` — 토큰 타입 자동 판별 (User Access Token / API Key) |
-| `GET /auth/.well-known/jwks.json`       | JWKS 공개키 (Kafka 브로커 토큰 검증용)                                   |
+| 엔드포인트                                  | 용도                                                                             | 인증        |
+| ------------------------------------------- | -------------------------------------------------------------------------------- | ----------- |
+| `GET /api/auth/google/login`                | Google OAuth 로그인 시작                                                         | 없음        |
+| `GET /api/auth/google/callback`             | Google OAuth 콜백 → Access/Refresh Token 발급                                    | 없음        |
+| `POST /api/auth/refresh`                    | Refresh Token으로 Access/Refresh 재발급                                          | 없음        |
+| `GET /api/auth/validate`                    | Traefik forwardAuth — 토큰 타입 자동 판별 (User JWT / API Key), 헤더로 결과 반환 | 없음        |
+| `GET /api/auth/provider`                    | 현재 사용자의 Provider 정보 조회                                                 | forwardAuth |
+| `POST /api/auth/provider/register`          | Provider 가입                                                                    | forwardAuth |
+| `POST /api/auth/provider/api-key`           | API Key 발급                                                                     | forwardAuth |
+| `GET /api/auth/provider/api-key`            | API Key 목록 조회                                                                | forwardAuth |
+| `PATCH /api/auth/provider/api-key/{keyId}`  | API Key 이름 수정                                                                | forwardAuth |
+| `DELETE /api/auth/provider/api-key/{keyId}` | API Key 폐기                                                                     | forwardAuth |
+| `POST /api/auth/kafka/token`                | Kafka Access Token 발급 (OAUTHBEARER)                                            | API Key     |
+| `GET /api/auth/.well-known/jwks.json`       | JWKS 공개키 (Kafka 브로커 토큰 검증용)                                           | 없음        |
 
 ## User 인증 흐름
 
@@ -70,22 +70,31 @@ Auth Service는 모든 인증/인가를 중앙에서 담당한다.
 
 > Kafka 브로커는 Auth Service의 JWKS 엔드포인트로 토큰 서명을 검증한다. 매번 Auth Service에 요청하지 않고 공개키 캐싱으로 처리. 상세 흐름은 [메시징 문서](../shared/messaging.md#인증-sasl-oauthbearer) 참고.
 
-## Nginx 헤더 주입
+## Traefik forwardAuth 헤더 주입
 
-### 통합 Gateway (`/api`)
+### 동작 방식
 
-Auth Service가 토큰 타입(User JWT / Provider 토큰)을 자동 판별하여 적절한 헤더를 반환한다.
+Traefik forwardAuth 미들웨어가 보호 대상 경로(`/api/auth/provider/*`, `/api/*`)의 요청을 Auth Service `GET /api/auth/validate`로 전달한다. Auth Service가 토큰을 검증하고 결과를 응답 헤더로 반환하면, Traefik이 이 헤더를 업스트림 요청에 주입한다.
 
-| 단계 | 동작                                                                                   |
-| ---- | -------------------------------------------------------------------------------------- |
-| 1    | 클라이언트 헤더 초기화: `X-User-Id`, `X-User-Role`, `X-Provider-Id`, `X-Agent-Id` 제거 |
-| 2    | Auth Service `/validate`로 토큰 검증 (타입 자동 판별)                                  |
-| 3    | User JWT인 경우 → `X-User-Id`, `X-User-Role` 반환                                      |
-| 3'   | API Key인 경우 → `X-Provider-Id`, `X-Agent-Id`, `X-User-Id`(위임) 반환                 |
-| 4    | `X-Request-Id` 항상 새로 생성 (클라이언트 값 무시)                                     |
-| 5    | 업스트림으로 포워딩                                                                    |
+| 단계 | 동작                                                                          |
+| ---- | ----------------------------------------------------------------------------- |
+| 1    | Traefik이 `Authorization` 헤더를 포함하여 `GET /api/auth/validate`로 전달     |
+| 2    | Auth Service가 토큰 타입 자동 판별 (`bk_` prefix → API Key, 그 외 → User JWT) |
+| 3    | User JWT인 경우 → `X-User-Id`, `X-User-Role` 응답 헤더 반환                   |
+| 3'   | API Key인 경우 → `X-Provider-Id` 응답 헤더 반환                               |
+| 4    | `X-Request-Id` 항상 새로 생성                                                 |
+| 5    | Traefik이 응답 헤더를 업스트림 요청에 주입하여 포워딩                         |
 
-다운스트림 서비스는 `X-User-Id` 유무로 사용자 요청을, `X-Provider-Id` 유무로 Provider/Agent 요청을 구분한다.
+다운스트림 서비스는 `X-User-Id` 유무로 사용자 요청을, `X-Provider-Id` 유무로 Provider/Agent 요청을 구분한다. 컨트롤러에서 `JwtVerifier`를 직접 호출하지 않고 `X-User-Id` 헤더를 읽는다.
+
+### forwardAuth 미적용 경로
+
+| 경로                 | 이유                         |
+| -------------------- | ---------------------------- |
+| `/api/auth/google/*` | OAuth 시작/콜백, 인증 불필요 |
+| `/api/auth/refresh`  | refreshToken 자체가 인증     |
+| `/api/auth/validate` | 인증 수행 주체               |
+| `/*` (FE 정적 파일)  | 인증 불필요                  |
 
 > 헤더 스푸핑 방지 등 보안 상세는 [보안 문서](../shared/security.md#헤더스푸핑-레이어) 참고.
 
