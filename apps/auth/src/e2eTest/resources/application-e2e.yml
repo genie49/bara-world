@@ -1,0 +1,8 @@
+bara:
+  auth:
+    google:
+      client-id: e2e-test-client
+      client-secret: e2e-test-secret
+      redirect-uri: http://localhost:0/api/auth/google/callback
+    refresh-token:
+      grace-period-seconds: 1
