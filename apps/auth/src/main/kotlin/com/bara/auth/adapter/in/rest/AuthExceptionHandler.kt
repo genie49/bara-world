@@ -4,6 +4,7 @@ import com.bara.auth.config.GoogleOAuthProperties
 import com.bara.auth.domain.exception.GoogleExchangeFailedException
 import com.bara.auth.domain.exception.InvalidIdTokenException
 import com.bara.auth.domain.exception.InvalidOAuthStateException
+import com.bara.common.logging.WideEvent
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -17,13 +18,25 @@ class AuthExceptionHandler(
 ) {
 
     @ExceptionHandler(InvalidOAuthStateException::class)
-    fun handleInvalidState(): ResponseEntity<Void> = redirectWithError("invalid_state")
+    fun handleInvalidState(): ResponseEntity<Void> {
+        WideEvent.put("error_type", "InvalidOAuthStateException")
+        WideEvent.put("outcome", "invalid_state")
+        return redirectWithError("invalid_state")
+    }
 
     @ExceptionHandler(GoogleExchangeFailedException::class)
-    fun handleExchangeFailed(): ResponseEntity<Void> = redirectWithError("google_exchange_failed")
+    fun handleExchangeFailed(): ResponseEntity<Void> {
+        WideEvent.put("error_type", "GoogleExchangeFailedException")
+        WideEvent.put("outcome", "exchange_failed")
+        return redirectWithError("google_exchange_failed")
+    }
 
     @ExceptionHandler(InvalidIdTokenException::class)
-    fun handleInvalidIdToken(): ResponseEntity<Void> = redirectWithError("invalid_id_token")
+    fun handleInvalidIdToken(): ResponseEntity<Void> {
+        WideEvent.put("error_type", "InvalidIdTokenException")
+        WideEvent.put("outcome", "invalid_id_token")
+        return redirectWithError("invalid_id_token")
+    }
 
     private fun redirectWithError(code: String): ResponseEntity<Void> {
         val uri = URI.create("${frontendCallbackBase()}?error=$code")
@@ -32,8 +45,6 @@ class AuthExceptionHandler(
     }
 
     private fun frontendCallbackBase(): String {
-        // redirect-uri: http://localhost:5173/auth/google/callback
-        // → http://localhost:5173/auth/callback
         return googleProps.redirectUri.replace("/auth/google/callback", "/auth/callback")
     }
 }
