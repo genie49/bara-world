@@ -84,11 +84,21 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 
 ## 인프라 레이어
 
-### Redis 보안
+### MongoDB 보안 (구현 완료)
 
-- AUTH: 강력한 패스워드 설정
-- bind: 로컬호스트 및 내부망만 허용
-- TLS: Redis 6.0+ TLS 지원 활용
+- root 계정 인증: `MONGO_INITDB_ROOT_USERNAME/PASSWORD`로 자동 생성
+- prod overlay에서 `data-secrets` Secret을 통해 credential 주입
+- Auth Service는 `auth-secrets`의 `MONGODB_URI`(인증 포함 URI)로 접속
+- NodePort(30017)로 외부 접속 가능 — Compass 등 관리 도구 사용 시 인증 필수
+- dev 환경은 인증 없이 동작
+
+### Redis 보안 (구현 완료)
+
+- AUTH: `--requirepass`로 비밀번호 설정 (prod overlay에서 `data-secrets` Secret 주입)
+- Auth Service는 `SPRING_DATA_REDIS_PASSWORD` 환경변수로 비밀번호 주입
+- NodePort(30379)로 외부 접속 가능 — 인증 필수
+- dev 환경은 인증 없이 동작
+- TLS: Redis 6.0+ TLS 지원 활용 (미구현, 후순위)
 - 권한 분리: API Service는 읽기/쓰기(등록), Agent는 heartbeat 갱신(API Service 경유)
 
 ### Kafka 자격증명 보호
@@ -164,7 +174,7 @@ Agent 서버는 HTTP를 노출하지 않으며, 모든 통신은 Kafka를 통해
 1. OCI 방화벽 + Cloudflare IP만 허용
 2. 전 구간 TLS (내부 포함)
 3. Nginx 헤더 초기화 후 재주입
-4. Redis AUTH + bind 제한
+4. ~~Redis AUTH + bind 제한~~ → **완료** (MongoDB root 인증 + Redis requirepass)
 
 ### 안정화 후 순차 추가
 
