@@ -2,6 +2,7 @@ package com.bara.auth.adapter.`in`.rest
 
 import com.bara.auth.application.port.`in`.command.LoginWithGoogleUseCase
 import com.bara.auth.config.GoogleOAuthProperties
+import com.bara.common.logging.WideEvent
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -21,6 +22,8 @@ class AuthController(
     @GetMapping("/login")
     fun login(): ResponseEntity<Void> {
         val url = useCase.buildLoginUrl()
+        WideEvent.put("outcome", "redirect_to_google")
+        WideEvent.message("Google 로그인 URL 리다이렉트")
         return redirect(url)
     }
 
@@ -30,6 +33,8 @@ class AuthController(
         @RequestParam state: String,
     ): ResponseEntity<Void> {
         val jwt = useCase.login(code = code, state = state)
+        WideEvent.put("outcome", "success")
+        WideEvent.message("Google OAuth 콜백 성공")
         return redirect("${frontendCallbackBase()}?token=$jwt")
     }
 

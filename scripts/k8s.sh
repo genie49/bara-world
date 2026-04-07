@@ -53,6 +53,8 @@ create_cluster() {
     echo "──── k3d 클러스터 생성 ────"
     k3d cluster create "$CLUSTER_NAME" \
         --port "80:80@loadbalancer" \
+        --port "27017:30017@server:0" \
+        --port "6379:30379@server:0" \
         --volume "$K8S_DIR/base/gateway/traefik-config.yaml:/var/lib/rancher/k3s/server/manifests/traefik-config.yaml@server:0" \
         --wait
 
@@ -83,6 +85,14 @@ load_images() {
     echo "──── Docker 이미지 로드 ────"
     k3d image import bara/auth:latest bara/fe:latest -c "$CLUSTER_NAME"
     echo "✓ 이미지 로드 완료"
+
+    # deployment가 존재하면 자동 재시작
+    if kubectl get deployment auth -n core &>/dev/null; then
+        echo "──── Pod 재시작 ────"
+        kubectl rollout restart deployment/auth -n core
+        kubectl rollout restart deployment/fe -n core
+        echo "✓ Pod 재시작 요청 완료"
+    fi
 }
 
 apply_manifests() {

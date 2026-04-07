@@ -25,6 +25,16 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_ENVIRONMENT
+          value: "prod"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SPRING_PROFILES_ACTIVE
+          value: "prod"
   - target:
       kind: Deployment
       name: fe
@@ -37,3 +47,28 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
+  - target:
+      kind: Service
+      name: redis
+      namespace: data
+    patch: |
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30379
+  - target:
+      kind: Service
+      name: mongodb
+      namespace: data
+    patch: |
+      - op: replace
+        path: /spec/clusterIP
+        value: ""
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30017

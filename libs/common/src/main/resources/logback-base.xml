@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- MDC 키는 모두 포함 (필터에서 관리하므로 별도 제한 불필요) -->
+            <customFields>
+                {"service":"${SERVICE_NAME:-unknown}",
+                 "version":"${APP_VERSION:-local}",
+                 "environment":"${APP_ENVIRONMENT:-dev}",
+                 "instance_id":"${HOSTNAME:-local}"}</customFields>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</included>
