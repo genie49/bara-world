@@ -99,6 +99,14 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 커밋/브랜치 규칙은 Husky hooks로 자동 검증된다. 커밋 전에 반드시 `docs/guides/git-convention.md`를 확인할 것.
 
+### 커밋 시 필수 규칙
+
+- **`Co-Authored-By` 트레일러 금지** — `.husky/commit-msg` 훅이 차단함. 커밋 메시지에 절대 포함하지 말 것.
+- **`--no-verify` 사용 금지** — Git hooks를 우회하면 안 됨.
+- **Subagent/Agent 호출 시에도 반드시 전달할 것:**
+  - "커밋 메시지에 Co-Authored-By 트레일러를 붙이지 마라."
+  - "git commit 시 --no-verify 플래그를 사용하지 마라."
+
 ## Logging
 
 - Wide Event 패턴 사용 — 요청당 서비스당 단일 구조화 로그 출력 (dev: 텍스트, prod: JSON)
