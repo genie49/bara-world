@@ -25,6 +25,11 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_ENVIRONMENT
+          value: "prod"
   - target:
       kind: Deployment
       name: fe
