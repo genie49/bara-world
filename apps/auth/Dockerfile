@@ -8,13 +8,15 @@ COPY build-logic/ build-logic/
 COPY libs/common/build.gradle.kts libs/common/
 COPY apps/auth/build.gradle.kts apps/auth/
 
-# 2) 의존성 다운로드 (build.gradle.kts 변경 시에만 재실행)
-RUN ./gradlew :apps:auth:dependencies --no-daemon -q
+# 2) 의존성 다운로드 (Gradle 캐시를 BuildKit 마운트로 유지)
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew :apps:auth:dependencies --no-daemon -q
 
-# 3) 소스 복사 + 빌드 (소스 변경 시에만 재실행)
+# 3) 소스 복사 + 빌드
 COPY libs/ libs/
 COPY apps/auth/ apps/auth/
-RUN ./gradlew :apps:auth:bootJar --no-daemon
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew :apps:auth:bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
