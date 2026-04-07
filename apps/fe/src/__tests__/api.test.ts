@@ -1,6 +1,6 @@
 // apps/fe/src/__tests__/api.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { saveTokens, getAccessToken, getRefreshToken, clearTokens } from '../lib/auth'
+import { saveTokens, getAccessToken, getRefreshToken } from '../lib/auth'
 
 let apiFetch: typeof import('../lib/api').apiFetch
 
@@ -36,7 +36,7 @@ describe('apiFetch', () => {
     saveTokens('expired-access', 'valid-refresh')
 
     let callCount = 0
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, _init) => {
       const url = typeof input === 'string' ? input : (input as Request).url
       if (url.includes('/auth/refresh')) {
         return new Response(
