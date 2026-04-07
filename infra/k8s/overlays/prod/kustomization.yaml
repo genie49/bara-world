@@ -45,7 +45,7 @@ patches:
           valueFrom:
             secretKeyRef:
               name: auth-secrets
-              key: SPRING_DATA_MONGODB_URI
+              key: MONGODB_URI
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
