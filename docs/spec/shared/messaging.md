@@ -112,7 +112,7 @@ sequenceDiagram
     participant Auth as Auth Service
     participant K as Kafka 브로커
 
-    A->>Auth: POST /auth/kafka/token<br/>Authorization: Bearer {provider_token}
+    A->>Auth: POST /auth/kafka/token<br/>Authorization: Bearer {api_key}
     Auth-->>A: access_token (1시간), bootstrap_servers
 
     A->>K: 연결 (SASL_SSL + OAUTHBEARER)
@@ -136,9 +136,16 @@ sequenceDiagram
 | 방식                  | 탈취 시                                     |
 | --------------------- | ------------------------------------------- |
 | 고정 비밀번호 (SCRAM) | 수동 rotate 전까지 무한 사용                |
-| OAUTHBEARER 토큰      | 최대 1시간, Provider 토큰 차단 시 갱신 불가 |
+| OAUTHBEARER 토큰      | 최대 1시간, API Key 삭제 시 갱신 불가       |
 
 > 상세 결정 과정은 [ADR-004](../decisions/adr-004-kafka-oauthbearer.md) 참고.
+
+### 브로커 재인증 정책
+
+- `connections.max.reauth.ms=900000` (15분): 브로커가 15분마다 재인증 강제
+- 클라이언트 콜백에서 토큰 잔여 시간 20분 미만이면 Auth Service에 갱신 요청
+- Provider가 SUSPENDED되면 갱신 실패 → 다음 재인증 시점(최대 15분 이내)에 연결 차단
+- Kafka 자체는 이미 연결된 세션을 즉시 끊지 않으므로, `connections.max.reauth.ms`로 주기적 재인증을 강제하여 차단 지연을 최소화
 
 ### 재발급 실패 시
 

@@ -113,7 +113,7 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 핵심 구성:
 
-- **Auth Service** — Google OAuth → JWT 발급, Provider 토큰 관리, Kafka OAUTHBEARER 토큰
+- **Auth Service** — Google OAuth → Access/Refresh Token 발급, Provider API Key 관리, Kafka OAUTHBEARER 토큰
 - **API Service** — Agent 등록/조회, 태스크 처리(동기+SSE), Agent Card proxy
 - **Scheduler Service** — cron 기반 반복 태스크 발행, 결과 전달
 - **SDK** — Python, TypeScript, Java 공용 SDK (Kafka 통신, 인증, 메시지 포맷팅)
