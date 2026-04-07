@@ -59,8 +59,18 @@ cd apps/fe && pnpm install && pnpm dev
   - `ci-fe.yml`: pnpm test + build
 - **CD**: `main` 머지 시 자동 배포
   - 변경 감지 → Docker build → GCP Artifact Registry push → SSH → OCI VM(K3s) 배포
+  - Secret 관리: GCP Parameter Manager → `.env.prod` → `auth-secrets`(core ns) + `data-secrets`(data ns)
   - 상세 설계: `docs/spec/shared/ci-cd-design.md`
 - **K8s 환경 분리**: Kustomize (`infra/k8s/overlays/dev/`, `infra/k8s/overlays/prod/`)
+
+### DB 인증
+
+- **prod만 인증 적용** — dev(k3d)는 인증 없이 동작
+- **MongoDB**: `MONGO_INITDB_ROOT_USERNAME/PASSWORD`로 root 계정 생성. prod overlay에서 StatefulSet에 주입
+- **Redis**: `--requirepass`로 비밀번호 설정. prod overlay에서 Deployment args에 주입
+- **Auth Service**: prod overlay에서 `SPRING_DATA_MONGODB_URI`(인증 URI)와 `SPRING_DATA_REDIS_PASSWORD`를 Secret에서 주입
+- **credential 관리**: `.env.prod` → GCP Parameter Manager → deploy 시 `data-secrets`(data ns) + `auth-secrets`(core ns) 자동 생성
+- **외부 접속**: prod에서 MongoDB(30017), Redis(30379) NodePort로 외부 접속 가능 (인증 필수)
 
 ### Auth Service 첫 실행 (1회 세팅)
 

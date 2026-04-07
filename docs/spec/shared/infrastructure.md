@@ -34,7 +34,7 @@
 | DaemonSet   | fluent-bit                                                                    | 노드당 자동 1개            |
 | Gateway     | K8s Gateway API (`gateway.yaml`)                                              | Traefik이 구현체           |
 | HTTPRoute   | 경로 라우팅 규칙 (`routes.yaml`)                                              | `/auth/**`, `/**` 분기     |
-| Secret      | JWT 키, Provider 토큰 시크릿, Redis/Kafka 인증 정보                           |                            |
+| Secret      | `auth-secrets`(core), `data-secrets`(data): JWT 키, OAuth, DB credential      |                            |
 
 초기에는 모든 Deployment replicas를 1로 시작한다. 부하 발생 시 auth-service, api-service만 우선 스케일링.
 
@@ -108,13 +108,13 @@ ServiceLB(Klipper)가 LoadBalancer 타입 서비스를 처리하여 `localhost:8
 
 ## 네트워크 구성
 
-| 포트  | 용도               | 접근 범위       |
-| ----- | ------------------ | --------------- |
-| 443   | HTTPS (Traefik)    | Cloudflare IP만 |
-| 9093  | Kafka (TLS + SASL) | 외부 Agent 서버 |
-| 9092  | Kafka (내부, TLS)  | VM1 내부만      |
-| 27017 | MongoDB            | VM1 내부만      |
-| 6379  | Redis              | VM1 내부만      |
-| 3000  | Grafana            | Nginx 경유만    |
+| 포트  | 용도               | 접근 범위       | 인증              |
+| ----- | ------------------ | --------------- | ----------------- |
+| 443   | HTTPS (Traefik)    | Cloudflare IP만 | TLS               |
+| 9093  | Kafka (TLS + SASL) | 외부 Agent 서버 | SASL OAUTHBEARER  |
+| 9092  | Kafka (내부, TLS)  | VM1 내부만      | TLS               |
+| 30017 | MongoDB (NodePort) | 외부 접속 가능  | root 계정 인증    |
+| 30379 | Redis (NodePort)   | 외부 접속 가능  | requirepass       |
+| 3000  | Grafana            | Nginx 경유만    | -                 |
 
 > Kafka 포트(9093)는 Cloudflare를 경유하지 않고 직접 연결되므로 OCI VM 실제 IP가 노출된다. 이는 Kafka TCP 프록시의 한계로 인한 트레이드오프이다.
