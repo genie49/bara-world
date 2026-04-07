@@ -21,3 +21,28 @@ patches:
       - op: add
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
+  - target:
+      kind: Service
+      name: redis
+      namespace: data
+    patch: |
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30379
+  - target:
+      kind: Service
+      name: mongodb
+      namespace: data
+    patch: |
+      - op: replace
+        path: /spec/clusterIP
+        value: ""
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30017

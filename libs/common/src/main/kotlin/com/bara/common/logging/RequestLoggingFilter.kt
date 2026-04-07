@@ -49,14 +49,16 @@ class RequestLoggingFilter : OncePerRequestFilter() {
             MDC.put("status_code", statusCode.toString())
             MDC.put("duration_ms", durationMs.toString())
 
+            val message = WideEvent.getMessage() ?: "${request.method} ${request.requestURI}"
+
             if (thrown != null) {
                 MDC.put("error_type", thrown.javaClass.simpleName)
                 MDC.put("error_message", thrown.message ?: "")
-                log.error("request completed with error")
+                log.error(message)
             } else if (statusCode in 400..499) {
-                log.warn("request completed with client error")
+                log.warn(message)
             } else {
-                log.info("request completed")
+                log.info(message)
             }
 
             // 정리

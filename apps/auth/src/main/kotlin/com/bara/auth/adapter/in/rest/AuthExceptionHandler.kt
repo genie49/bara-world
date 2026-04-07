@@ -21,6 +21,7 @@ class AuthExceptionHandler(
     fun handleInvalidState(): ResponseEntity<Void> {
         WideEvent.put("error_type", "InvalidOAuthStateException")
         WideEvent.put("outcome", "invalid_state")
+        WideEvent.message("OAuth state 검증 실패")
         return redirectWithError("invalid_state")
     }
 
@@ -28,6 +29,7 @@ class AuthExceptionHandler(
     fun handleExchangeFailed(): ResponseEntity<Void> {
         WideEvent.put("error_type", "GoogleExchangeFailedException")
         WideEvent.put("outcome", "exchange_failed")
+        WideEvent.message("Google code 교환 실패")
         return redirectWithError("google_exchange_failed")
     }
 
@@ -35,6 +37,7 @@ class AuthExceptionHandler(
     fun handleInvalidIdToken(): ResponseEntity<Void> {
         WideEvent.put("error_type", "InvalidIdTokenException")
         WideEvent.put("outcome", "invalid_id_token")
+        WideEvent.message("ID token 검증 실패")
         return redirectWithError("invalid_id_token")
     }
 

@@ -39,13 +39,18 @@ cd apps/fe && pnpm install && pnpm dev
 ./scripts/docker.sh clean           # 이미지 삭제
 
 ./scripts/k8s.sh create             # k3d 클러스터 생성 + 이미지 로드 + 배포 (localhost:80)
+./scripts/k8s.sh apply              # K8s manifest만 재적용 (yaml 수정 시)
+./scripts/k8s.sh load               # 이미지 재로드 + Pod 자동 재시작
 ./scripts/k8s.sh stop               # 클러스터 중지
 ./scripts/k8s.sh start              # 클러스터 재시작
 ./scripts/k8s.sh delete             # 클러스터 삭제
 ```
 
+- 코드 수정 후 반영: `./scripts/docker.sh build auth && ./scripts/k8s.sh load`
+- manifest 수정 후 반영: `./scripts/k8s.sh apply`
 - 게이트웨이: Traefik (K3s 내장) + Gateway API (`infra/k8s/base/gateway/`)
 - 로컬 인프라(MongoDB, Redis, Kafka)만 필요 시: `./scripts/infra.sh up`
+- k3d 클러스터에서 MongoDB(`localhost:27017`), Redis(`localhost:6379`) 직접 접속 가능
 
 ### CI/CD
 
@@ -86,8 +91,9 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 ## Logging
 
-- Wide Event 패턴 사용 — 요청당 서비스당 단일 구조화 JSON 로그 출력
+- Wide Event 패턴 사용 — 요청당 서비스당 단일 구조화 로그 출력 (dev: 텍스트, prod: JSON)
 - 로깅 공통 모듈: `libs/common/src/main/kotlin/com/bara/common/logging/`
+- `WideEvent.put()` — 구조화 필드, `WideEvent.message()` — 사람이 읽을 수 있는 로그 메시지
 - 새 port/adapter/엔드포인트 추가 시 반드시 `docs/guides/logging/README.md` 참조
 - 해당 흐름의 비즈니스 컨텍스트 로깅 필드를 정의하고 `docs/guides/logging/flows/`에 문서 추가
 

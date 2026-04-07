@@ -23,6 +23,7 @@ class AuthController(
     fun login(): ResponseEntity<Void> {
         val url = useCase.buildLoginUrl()
         WideEvent.put("outcome", "redirect_to_google")
+        WideEvent.message("Google 로그인 URL 리다이렉트")
         return redirect(url)
     }
 
@@ -33,6 +34,7 @@ class AuthController(
     ): ResponseEntity<Void> {
         val jwt = useCase.login(code = code, state = state)
         WideEvent.put("outcome", "success")
+        WideEvent.message("Google OAuth 콜백 성공")
         return redirect("${frontendCallbackBase()}?token=$jwt")
     }
 

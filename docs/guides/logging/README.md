@@ -3,7 +3,17 @@
 ## 개요
 
 bara-world 백엔드는 **Wide Event 패턴**을 사용한다.
-요청 하나당 서비스 하나에서 단일 구조화 JSON 로그를 출력한다.
+요청 하나당 서비스 하나에서 단일 구조화 로그를 출력한다.
+
+## 로그 포맷
+
+- **dev** (기본): 사람이 읽기 쉬운 텍스트 포맷
+- **prod** (`SPRING_PROFILES_ACTIVE=prod`): JSON 구조화 포맷 (logstash-logback-encoder)
+
+설정 파일:
+- `libs/common/src/main/resources/logback-dev.xml` — dev 텍스트 포맷
+- `libs/common/src/main/resources/logback-base.xml` — prod JSON 포맷
+- 각 서비스의 `logback-spring.xml`에서 `<springProfile>`로 분기
 
 ## 핵심 규칙
 
@@ -30,12 +40,17 @@ bara-world 백엔드는 **Wide Event 패턴**을 사용한다.
 ### 4. WideEvent 사용법
 
 ```kotlin
-// Controller나 Service에서
+// 비즈니스 컨텍스트 추가
 WideEvent.put("user_id", user.id)
 WideEvent.put("outcome", "success")
 WideEvent.put("is_new_user", true)
+
+// 사람이 읽을 수 있는 로그 메시지 (필수)
+WideEvent.message("Google OAuth 콜백 성공")
 ```
 
+- `WideEvent.put()` — MDC에 포함되는 구조화 필드
+- `WideEvent.message()` — 로그의 메시지 본문. 미설정 시 `"GET /path"` 형태로 fallback
 - ThreadLocal 기반이므로 요청 스레드 내에서만 유효
 - 필터가 finally에서 자동 정리하므로 수동 clear 불필요
 
@@ -49,6 +64,7 @@ WideEvent에 에러 컨텍스트만 추가한다:
 fun handle(): ResponseEntity<...> {
     WideEvent.put("error_type", "SomeException")
     WideEvent.put("outcome", "some_error")
+    WideEvent.message("설명적인 에러 메시지")
     return ...
 }
 ```
@@ -61,17 +77,17 @@ fun handle(): ResponseEntity<...> {
 ## 새 엔드포인트 추가 시 체크리스트
 
 1. 해당 흐름에서 추적해야 할 비즈니스 필드 정의
-2. Controller/Service에서 `WideEvent.put()` 호출 추가
-3. ExceptionHandler에서 에러 컨텍스트 추가
+2. Controller/Service에서 `WideEvent.put()` + `WideEvent.message()` 호출 추가
+3. ExceptionHandler에서 에러 컨텍스트 + 메시지 추가
 4. `docs/guides/logging/flows/`에 흐름 문서 작성
 5. MDC 키는 자동 포함되므로 `logback-base.xml` 수정 불필요
 
 ## 새 서비스 추가 시 체크리스트
 
 1. `build.gradle.kts`에 `implementation(project(":libs:common"))` 의존성 추가
-2. `src/main/resources/logback-spring.xml` 생성 → `<include resource="logback-base.xml"/>` 
+2. `src/main/resources/logback-spring.xml` 생성 (springProfile로 dev/prod 분기, auth 참고)
 3. K8s manifest에 환경변수 추가: `SERVICE_NAME`, `APP_VERSION`, `APP_ENVIRONMENT`
-4. prod overlay에 `APP_ENVIRONMENT=prod` 패치 추가
+4. prod overlay에 `APP_ENVIRONMENT=prod`, `SPRING_PROFILES_ACTIVE=prod` 패치 추가
 5. `deploy.yml`에 해당 서비스의 `APP_VERSION` 주입 추가
 
 ## 흐름 문서
