@@ -35,28 +35,17 @@ patches:
         value:
           name: SPRING_PROFILES_ACTIVE
           value: "prod"
-      - op: add
-        path: /spec/template/spec/containers/0/env/-
-        value:
-          name: MONGO_ROOT_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: auth-secrets
-              key: MONGO_ROOT_USERNAME
-      - op: add
-        path: /spec/template/spec/containers/0/env/-
-        value:
-          name: MONGO_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: auth-secrets
-              key: MONGO_ROOT_PASSWORD
       - op: test
         path: /spec/template/spec/containers/0/env/0/name
         value: SPRING_DATA_MONGODB_URI
       - op: replace
-        path: /spec/template/spec/containers/0/env/0/value
-        value: "mongodb://$(MONGO_ROOT_USERNAME):$(MONGO_ROOT_PASSWORD)@mongodb.data.svc.cluster.local:27017/bara-auth?authSource=admin"
+        path: /spec/template/spec/containers/0/env/0
+        value:
+          name: SPRING_DATA_MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: SPRING_DATA_MONGODB_URI
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
