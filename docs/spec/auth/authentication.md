@@ -181,3 +181,35 @@ sequenceDiagram
 | created_at | 발급 시간                              |
 
 `api_keys` 컬렉션에 별도 저장. `keyHash`에 unique index, `providerId`에 index. Provider당 최대 5개.
+
+## E2E 테스트 전략
+
+### API-level E2E
+
+별도 Gradle source set `e2eTest`에서 실행. CI에는 포함하지 않고 로컬 수동 실행.
+
+```bash
+./gradlew :apps:auth:e2eTest
+```
+
+| 구성 요소       | 방식                                                                 |
+| --------------- | -------------------------------------------------------------------- |
+| MongoDB, Redis  | TestContainers (GenericContainer)                                    |
+| Google OAuth    | `GoogleOAuthClient` 포트의 fake 구현체 (`@Primary`)                  |
+| HTTP 클라이언트 | `TestRestTemplate` (`@SpringBootTest(webEnvironment = RANDOM_PORT)`) |
+| JWT 키          | `@DynamicPropertySource`로 테스트용 RSA 키쌍 동적 생성               |
+
+**테스트 구조:**
+
+- **Happy-path 시나리오 체인**: 로그인 → validate → refresh → reuse 거부 → Provider 등록/조회 → API Key 발급/validate/수정/삭제 → 삭제된 Key validate 실패
+- **독립 에러 케이스**: validate 에러 (만료 JWT, 잘못된 서명, 없는 API Key, SUSPENDED Provider), Provider 에러 (중복 등록, 미등록 조회, PENDING에서 Key 발급), API Key 에러 (5개 초과, 없는 keyId)
+
+### Gateway 스모크 테스트
+
+k3d 클러스터 실행 상태에서 curl 기반 스크립트로 핵심 라우팅 확인.
+
+```bash
+./scripts/smoke-test.sh <jwt>
+```
+
+검증 항목: FE 정적 파일, public 경로 접근, protected 경로 인증 없이 401, 유효 JWT로 접근, CORS preflight, health check.
