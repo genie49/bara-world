@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.get
     properties = [
         "bara.auth.google.client-id=test-client",
         "bara.auth.google.client-secret=test-secret",
-        "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
+        "bara.auth.google.redirect-uri=http://localhost:5173/api/auth/google/callback",
     ]
 )
 class ValidateControllerTest {

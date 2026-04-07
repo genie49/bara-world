@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/auth/provider/api-key")
+@RequestMapping("/provider/api-key")
 class ApiKeyController(
     private val issueUseCase: IssueApiKeyUseCase,
     private val listQuery: ListApiKeysQuery,

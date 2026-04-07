@@ -28,7 +28,7 @@ import java.time.Instant
     properties = [
         "bara.auth.google.client-id=test-client",
         "bara.auth.google.client-secret=test-secret",
-        "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
+        "bara.auth.google.redirect-uri=http://localhost:5173/api/auth/google/callback",
     ]
 )
 class ProviderControllerTest {
@@ -57,7 +57,7 @@ class ProviderControllerTest {
             createdAt = now,
         )
 
-        mockMvc.post("/auth/provider/register") {
+        mockMvc.post("/provider/register") {
             header("Authorization", "Bearer test-jwt")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-provider"}"""
@@ -74,7 +74,7 @@ class ProviderControllerTest {
         every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         every { registerUseCase.register("u-1", "my-provider") } throws ProviderAlreadyExistsException()
 
-        mockMvc.post("/auth/provider/register") {
+        mockMvc.post("/provider/register") {
             header("Authorization", "Bearer test-jwt")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-provider"}"""
@@ -96,7 +96,7 @@ class ProviderControllerTest {
             createdAt = now,
         )
 
-        mockMvc.get("/auth/provider") {
+        mockMvc.get("/provider") {
             header("Authorization", "Bearer test-jwt")
         }.andExpect {
             status { isOk() }
@@ -111,7 +111,7 @@ class ProviderControllerTest {
         every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         every { getProviderQuery.getByUserId("u-1") } returns null
 
-        mockMvc.get("/auth/provider") {
+        mockMvc.get("/provider") {
             header("Authorization", "Bearer test-jwt")
         }.andExpect {
             status { isNotFound() }

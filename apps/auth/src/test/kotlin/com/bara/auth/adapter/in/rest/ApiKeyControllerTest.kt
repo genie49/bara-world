@@ -36,7 +36,7 @@ import java.time.Instant
     properties = [
         "bara.auth.google.client-id=test-client",
         "bara.auth.google.client-secret=test-secret",
-        "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
+        "bara.auth.google.redirect-uri=http://localhost:5173/api/auth/google/callback",
     ]
 )
 class ApiKeyControllerTest {
@@ -82,7 +82,7 @@ class ApiKeyControllerTest {
             rawKey = "bara_rawsecretkey",
         )
 
-        mockMvc.post("/auth/provider/api-key") {
+        mockMvc.post("/provider/api-key") {
             header("Authorization", "Bearer test-jwt")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-key"}"""
@@ -103,7 +103,7 @@ class ApiKeyControllerTest {
             apiKey("k-2", "key-two"),
         )
 
-        mockMvc.get("/auth/provider/api-key") {
+        mockMvc.get("/provider/api-key") {
             header("Authorization", "Bearer test-jwt")
         }.andExpect {
             status { isOk() }
@@ -118,7 +118,7 @@ class ApiKeyControllerTest {
         stubJwt()
         every { updateUseCase.update("u-1", "k-1", "new-name") } returns apiKey(name = "new-name")
 
-        mockMvc.patch("/auth/provider/api-key/k-1") {
+        mockMvc.patch("/provider/api-key/k-1") {
             header("Authorization", "Bearer test-jwt")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"new-name"}"""
@@ -134,7 +134,7 @@ class ApiKeyControllerTest {
         stubJwt()
         every { deleteUseCase.delete("u-1", "k-1") } just runs
 
-        mockMvc.delete("/auth/provider/api-key/k-1") {
+        mockMvc.delete("/provider/api-key/k-1") {
             header("Authorization", "Bearer test-jwt")
         }.andExpect {
             status { isNoContent() }
@@ -146,7 +146,7 @@ class ApiKeyControllerTest {
         stubJwt()
         every { issueUseCase.issue("u-1", "my-key") } throws ProviderNotFoundException()
 
-        mockMvc.post("/auth/provider/api-key") {
+        mockMvc.post("/provider/api-key") {
             header("Authorization", "Bearer test-jwt")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-key"}"""

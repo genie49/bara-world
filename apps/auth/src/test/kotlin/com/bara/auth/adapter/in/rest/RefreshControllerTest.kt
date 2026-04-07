@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.post
     properties = [
         "bara.auth.google.client-id=test-client",
         "bara.auth.google.client-secret=test-secret",
-        "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
+        "bara.auth.google.redirect-uri=http://localhost:5173/api/auth/google/callback",
     ]
 )
 class RefreshControllerTest {
@@ -38,7 +38,7 @@ class RefreshControllerTest {
     fun `유효한 Refresh Token으로 새 토큰 쌍이 반환된다`() {
         every { useCase.refresh("valid-refresh") } returns TokenPair("new-access", "new-refresh")
 
-        mockMvc.post("/auth/refresh") {
+        mockMvc.post("/refresh") {
             contentType = MediaType.APPLICATION_JSON
             content = """{"refreshToken":"valid-refresh"}"""
         }.andExpect {
@@ -53,7 +53,7 @@ class RefreshControllerTest {
     fun `잘못된 Refresh Token은 401을 반환한다`() {
         every { useCase.refresh("invalid") } throws InvalidTokenException("Invalid token")
 
-        mockMvc.post("/auth/refresh") {
+        mockMvc.post("/refresh") {
             contentType = MediaType.APPLICATION_JSON
             content = """{"refreshToken":"invalid"}"""
         }.andExpect {
