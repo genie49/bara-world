@@ -194,6 +194,8 @@ jobs:
             if [ "$AUTH_CHANGED" = "true" ]; then
               kubectl set image deployment/auth -n core \
                 auth=$REGISTRY/$REPOSITORY/auth:$IMAGE_TAG
+              kubectl set env deployment/auth -n core \
+                APP_VERSION=$IMAGE_TAG
             fi
             if [ "$FE_CHANGED" = "true" ]; then
               kubectl set image deployment/fe -n core \
