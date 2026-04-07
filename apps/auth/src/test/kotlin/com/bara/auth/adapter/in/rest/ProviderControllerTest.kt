@@ -2,8 +2,6 @@ package com.bara.auth.adapter.`in`.rest
 
 import com.bara.auth.application.port.`in`.command.RegisterProviderUseCase
 import com.bara.auth.application.port.`in`.query.GetProviderQuery
-import com.bara.auth.application.port.out.JwtClaims
-import com.bara.auth.application.port.out.JwtVerifier
 import com.bara.auth.config.GoogleOAuthProperties
 import com.bara.auth.domain.exception.ProviderAlreadyExistsException
 import com.bara.auth.domain.model.Provider
@@ -40,14 +38,10 @@ class ProviderControllerTest {
     lateinit var registerUseCase: RegisterProviderUseCase
 
     @MockkBean
-    lateinit var jwtVerifier: JwtVerifier
-
-    @MockkBean
     lateinit var getProviderQuery: GetProviderQuery
 
     @Test
     fun `POST auth provider register 성공 시 201과 Provider 정보 반환`() {
-        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         val now = Instant.parse("2024-01-01T00:00:00Z")
         every { registerUseCase.register("u-1", "my-provider") } returns Provider(
             id = "p-1",
@@ -58,7 +52,7 @@ class ProviderControllerTest {
         )
 
         mockMvc.post("/provider/register") {
-            header("Authorization", "Bearer test-jwt")
+            header("X-User-Id", "u-1")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-provider"}"""
         }.andExpect {
@@ -71,11 +65,10 @@ class ProviderControllerTest {
 
     @Test
     fun `Provider 중복 등록 시 409 CONFLICT 반환`() {
-        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         every { registerUseCase.register("u-1", "my-provider") } throws ProviderAlreadyExistsException()
 
         mockMvc.post("/provider/register") {
-            header("Authorization", "Bearer test-jwt")
+            header("X-User-Id", "u-1")
             contentType = MediaType.APPLICATION_JSON
             content = """{"name":"my-provider"}"""
         }.andExpect {
@@ -86,7 +79,6 @@ class ProviderControllerTest {
 
     @Test
     fun `GET provider - 등록된 Provider가 있으면 200 반환`() {
-        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         val now = Instant.parse("2024-01-01T00:00:00Z")
         every { getProviderQuery.getByUserId("u-1") } returns Provider(
             id = "p-1",
@@ -97,7 +89,7 @@ class ProviderControllerTest {
         )
 
         mockMvc.get("/provider") {
-            header("Authorization", "Bearer test-jwt")
+            header("X-User-Id", "u-1")
         }.andExpect {
             status { isOk() }
             jsonPath("$.id") { value("p-1") }
@@ -108,11 +100,10 @@ class ProviderControllerTest {
 
     @Test
     fun `GET provider - 미등록이면 404 반환`() {
-        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
         every { getProviderQuery.getByUserId("u-1") } returns null
 
         mockMvc.get("/provider") {
-            header("Authorization", "Bearer test-jwt")
+            header("X-User-Id", "u-1")
         }.andExpect {
             status { isNotFound() }
         }

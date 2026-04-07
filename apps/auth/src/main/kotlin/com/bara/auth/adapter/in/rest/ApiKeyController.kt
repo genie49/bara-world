@@ -4,7 +4,6 @@ import com.bara.auth.application.port.`in`.command.DeleteApiKeyUseCase
 import com.bara.auth.application.port.`in`.command.IssueApiKeyUseCase
 import com.bara.auth.application.port.`in`.command.UpdateApiKeyNameUseCase
 import com.bara.auth.application.port.`in`.query.ListApiKeysQuery
-import com.bara.auth.application.port.out.JwtVerifier
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -24,14 +23,12 @@ class ApiKeyController(
     private val listQuery: ListApiKeysQuery,
     private val updateUseCase: UpdateApiKeyNameUseCase,
     private val deleteUseCase: DeleteApiKeyUseCase,
-    private val jwtVerifier: JwtVerifier,
 ) {
     @PostMapping
     fun issue(
-        @RequestHeader("Authorization") auth: String,
+        @RequestHeader("X-User-Id") userId: String,
         @RequestBody request: IssueApiKeyRequest,
     ): ResponseEntity<IssuedApiKeyResponse> {
-        val userId = extractUserId(auth)
         val result = issueUseCase.issue(userId, request.name)
         return ResponseEntity.status(HttpStatus.CREATED).body(
             IssuedApiKeyResponse(
@@ -46,9 +43,8 @@ class ApiKeyController(
 
     @GetMapping
     fun list(
-        @RequestHeader("Authorization") auth: String,
+        @RequestHeader("X-User-Id") userId: String,
     ): ResponseEntity<ApiKeyListResponse> {
-        val userId = extractUserId(auth)
         val keys = listQuery.listByUserId(userId)
         return ResponseEntity.ok(ApiKeyListResponse(keys = keys.map {
             ApiKeyResponse(id = it.id, name = it.name, prefix = it.keyPrefix, createdAt = it.createdAt.toString())
@@ -57,11 +53,10 @@ class ApiKeyController(
 
     @PatchMapping("/{keyId}")
     fun updateName(
-        @RequestHeader("Authorization") auth: String,
+        @RequestHeader("X-User-Id") userId: String,
         @PathVariable keyId: String,
         @RequestBody request: UpdateApiKeyNameRequest,
     ): ResponseEntity<ApiKeyResponse> {
-        val userId = extractUserId(auth)
         val updated = updateUseCase.update(userId, keyId, request.name)
         return ResponseEntity.ok(
             ApiKeyResponse(
@@ -75,17 +70,11 @@ class ApiKeyController(
 
     @DeleteMapping("/{keyId}")
     fun delete(
-        @RequestHeader("Authorization") auth: String,
+        @RequestHeader("X-User-Id") userId: String,
         @PathVariable keyId: String,
     ): ResponseEntity<Void> {
-        val userId = extractUserId(auth)
         deleteUseCase.delete(userId, keyId)
         return ResponseEntity.noContent().build()
-    }
-
-    private fun extractUserId(authorization: String): String {
-        val token = authorization.removePrefix("Bearer ").trim()
-        return jwtVerifier.verify(token).userId
     }
 }
 
