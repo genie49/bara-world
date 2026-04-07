@@ -90,6 +90,8 @@ apply_manifests() {
         echo "  ⚠ 클러스터에 연결할 수 없음. 먼저 ./scripts/k8s.sh start 실행"
         exit 1
     fi
+    kubectl apply -f "$K8S_DIR/base/gateway/traefik-config.yaml"
+    sleep 5
     kubectl apply -k "$K8S_DIR/overlays/dev/"
     create_secrets
     echo "✓ 매니페스트 적용 완료"
