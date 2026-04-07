@@ -30,6 +30,10 @@ management:
       enabled: true
 
 bara:
+  openapi:
+    title: Bara Auth API
+    version: 1.0.0
+    description: 인증/인가 서비스 API
   auth:
     jwt:
       issuer: bara-auth
