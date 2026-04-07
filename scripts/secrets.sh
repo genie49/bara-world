@@ -56,9 +56,8 @@ pull_secrets() {
     latest=$(gcloud parametermanager parameters versions list \
         --parameter="$PARAM_NAME" \
         --location="$LOCATION" \
-        --sort-by="~createTime" \
-        --limit=1 \
-        --format="value(name)" 2>/dev/null)
+        --sort-by="createTime" \
+        --format="value(name)" 2>/dev/null | tail -1)
 
     if [[ -z "$latest" ]]; then
         echo "Error: 저장된 버전이 없습니다. 먼저 push를 실행하세요"
