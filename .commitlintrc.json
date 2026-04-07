@@ -6,7 +6,11 @@
       "always",
       ["feat", "fix", "docs", "style", "refactor", "test", "chore", "ci", "perf"]
     ],
-    "scope-enum": [2, "always", ["api", "auth", "scheduler", "sdk", "infra", "docs", "clients"]],
+    "scope-enum": [
+      2,
+      "always",
+      ["api", "auth", "scheduler", "sdk", "infra", "docs", "fe", "clients"]
+    ],
     "scope-empty": [2, "never"],
     "header-max-length": [2, "always", 100],
     "subject-full-stop": [2, "never", "."],

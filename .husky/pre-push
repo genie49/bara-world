@@ -12,7 +12,7 @@ fi
 # 브랜치 네이밍 검증
 # 허용 패턴: type/scope/description 또는 release/*, hotfix/*
 TYPES="feat|fix|docs|style|refactor|test|chore|ci|perf"
-SCOPES="api|auth|scheduler|sdk|infra|docs"
+SCOPES="api|auth|scheduler|sdk|infra|docs|fe|clients"
 VALID_PATTERN="^(($TYPES)/($SCOPES)/[a-z][a-z0-9-]*|release/.+|hotfix/.+)$"
 
 if ! echo "$BRANCH" | grep -qE "$VALID_PATTERN"; then
