@@ -1,6 +1,7 @@
 package com.bara.auth.adapter.`in`.rest
 
 import com.bara.auth.application.port.`in`.command.RegisterProviderUseCase
+import com.bara.auth.application.port.`in`.query.GetProviderQuery
 import com.bara.auth.application.port.out.JwtClaims
 import com.bara.auth.application.port.out.JwtVerifier
 import com.bara.auth.config.GoogleOAuthProperties
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import java.time.Instant
 
@@ -39,6 +41,9 @@ class ProviderControllerTest {
 
     @MockkBean
     lateinit var jwtVerifier: JwtVerifier
+
+    @MockkBean
+    lateinit var getProviderQuery: GetProviderQuery
 
     @Test
     fun `POST auth provider register 성공 시 201과 Provider 정보 반환`() {
@@ -76,6 +81,40 @@ class ProviderControllerTest {
         }.andExpect {
             status { isConflict() }
             jsonPath("$.error") { value("provider_already_exists") }
+        }
+    }
+
+    @Test
+    fun `GET provider - 등록된 Provider가 있으면 200 반환`() {
+        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
+        val now = Instant.parse("2024-01-01T00:00:00Z")
+        every { getProviderQuery.getByUserId("u-1") } returns Provider(
+            id = "p-1",
+            userId = "u-1",
+            name = "my-provider",
+            status = Provider.ProviderStatus.ACTIVE,
+            createdAt = now,
+        )
+
+        mockMvc.get("/auth/provider") {
+            header("Authorization", "Bearer test-jwt")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value("p-1") }
+            jsonPath("$.name") { value("my-provider") }
+            jsonPath("$.status") { value("ACTIVE") }
+        }
+    }
+
+    @Test
+    fun `GET provider - 미등록이면 404 반환`() {
+        every { jwtVerifier.verify("test-jwt") } returns JwtClaims(userId = "u-1", email = "test@test.com", role = "USER")
+        every { getProviderQuery.getByUserId("u-1") } returns null
+
+        mockMvc.get("/auth/provider") {
+            header("Authorization", "Bearer test-jwt")
+        }.andExpect {
+            status { isNotFound() }
         }
     }
 }
