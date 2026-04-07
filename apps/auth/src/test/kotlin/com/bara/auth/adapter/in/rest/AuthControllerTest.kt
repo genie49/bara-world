@@ -55,7 +55,7 @@ class AuthControllerTest {
             param("state", "state-1")
         }.andExpect {
             status { isFound() }
-            header { string("Location", "http://localhost:5173/auth/callback?token=jwt.token.xxx") }
+            header { string("Location", "http://localhost:5173/auth/callback?token=jwt.token.xxx&refreshToken=refresh.token.xxx") }
         }
     }
 
