@@ -1,1 +1,2 @@
 com.bara.common.logging.LoggingAutoConfiguration
+com.bara.common.openapi.OpenApiAutoConfiguration
