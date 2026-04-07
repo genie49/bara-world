@@ -188,6 +188,10 @@ jobs:
             kubectl delete secret auth-secrets -n core --ignore-not-found
             kubectl create secret generic auth-secrets -n core \
               --from-env-file=/tmp/.env.prod
+
+            kubectl delete secret data-secrets -n data --ignore-not-found
+            kubectl create secret generic data-secrets -n data \
+              --from-env-file=/tmp/.env.prod
             rm -f /tmp/.env.prod
 
             # 4. 변경된 서비스만 이미지 업데이트
