@@ -70,7 +70,7 @@ pull_secrets() {
     gcloud parametermanager parameters versions describe "$version_id" \
         --parameter="$PARAM_NAME" \
         --location="$LOCATION" \
-        --format="value(payload.data)" | base64 -d > "$ENV_FILE"
+        --format="value(payload.data)" | sed 'y|-_|+/|' | base64 -d > "$ENV_FILE"
     echo "✓ .env.prod 다운로드 완료 ($version_id)"
 }
 

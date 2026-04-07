@@ -183,7 +183,7 @@ jobs:
             VERSION_ID=$(basename "$LATEST")
             gcloud parametermanager parameters versions describe "$VERSION_ID" \
               --parameter=bara-env-prod --location=global \
-              --format="value(payload.data)" | base64 -d > /tmp/.env.prod
+              --format="value(payload.data)" | sed 'y|-_|+/|' | base64 -d > /tmp/.env.prod
 
             kubectl delete secret auth-secrets -n core --ignore-not-found
             kubectl create secret generic auth-secrets -n core \
