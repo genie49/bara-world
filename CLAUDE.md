@@ -84,6 +84,13 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 커밋/브랜치 규칙은 Husky hooks로 자동 검증된다. 커밋 전에 반드시 `docs/guides/git-convention.md`를 확인할 것.
 
+## Logging
+
+- Wide Event 패턴 사용 — 요청당 서비스당 단일 구조화 JSON 로그 출력
+- 로깅 공통 모듈: `libs/common/src/main/kotlin/com/bara/common/logging/`
+- 새 port/adapter/엔드포인트 추가 시 반드시 `docs/guides/logging/README.md` 참조
+- 해당 흐름의 비즈니스 컨텍스트 로깅 필드를 정의하고 `docs/guides/logging/flows/`에 문서 추가
+
 ## Architecture
 
 상세 설계: `docs/spec/overview.md` (서비스별 폴더 구조, ADR 11개)
