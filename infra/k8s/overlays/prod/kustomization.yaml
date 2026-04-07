@@ -51,11 +51,12 @@ patches:
             secretKeyRef:
               name: auth-secrets
               key: MONGO_ROOT_PASSWORD
-      - op: add
-        path: /spec/template/spec/containers/0/env/-
-        value:
-          name: SPRING_DATA_MONGODB_URI
-          value: "mongodb://$(MONGO_ROOT_USERNAME):$(MONGO_ROOT_PASSWORD)@mongodb.data.svc.cluster.local:27017/bara-auth?authSource=admin"
+      - op: test
+        path: /spec/template/spec/containers/0/env/0/name
+        value: SPRING_DATA_MONGODB_URI
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "mongodb://$(MONGO_ROOT_USERNAME):$(MONGO_ROOT_PASSWORD)@mongodb.data.svc.cluster.local:27017/bara-auth?authSource=admin"
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
