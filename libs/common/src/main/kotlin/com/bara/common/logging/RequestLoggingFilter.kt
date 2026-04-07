@@ -15,6 +15,10 @@ class RequestLoggingFilter : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger("wide-event")
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        return request.requestURI.startsWith("/actuator")
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,

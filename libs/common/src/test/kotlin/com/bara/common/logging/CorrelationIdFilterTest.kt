@@ -49,6 +49,16 @@ class CorrelationIdFilterTest {
     }
 
     @Test
+    fun `actuator 경로는 필터를 건너뛴다`() {
+        val request = MockHttpServletRequest("GET", "/actuator/health/readiness")
+        val response = MockHttpServletResponse()
+
+        filter.doFilter(request, response, FilterChain { _, _ -> })
+
+        assertNull(response.getHeader("X-Correlation-Id"))
+    }
+
+    @Test
     fun `필터 완료 후 MDC에서 correlation_id가 제거된다`() {
         val request = MockHttpServletRequest()
         val response = MockHttpServletResponse()

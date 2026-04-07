@@ -64,6 +64,17 @@ class RequestLoggingFilterTest {
     }
 
     @Test
+    fun `actuator 경로는 필터를 건너뛴다`() {
+        val request = MockHttpServletRequest("GET", "/actuator/health/liveness")
+        val response = MockHttpServletResponse()
+
+        filter.doFilter(request, response, FilterChain { _, _ -> })
+
+        assertNull(MDC.get("method"))
+        assertNull(MDC.get("path"))
+    }
+
+    @Test
     fun `예외 발생 시에도 MDC가 정리되고 예외는 다시 throw된다`() {
         val request = MockHttpServletRequest("GET", "/test")
         val response = MockHttpServletResponse()

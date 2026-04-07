@@ -12,6 +12,10 @@ import java.util.UUID
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class CorrelationIdFilter : OncePerRequestFilter() {
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        return request.requestURI.startsWith("/actuator")
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,

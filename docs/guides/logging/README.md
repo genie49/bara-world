@@ -66,6 +66,14 @@ fun handle(): ResponseEntity<...> {
 4. `docs/guides/logging/flows/`에 흐름 문서 작성
 5. MDC 키는 자동 포함되므로 `logback-base.xml` 수정 불필요
 
+## 새 서비스 추가 시 체크리스트
+
+1. `build.gradle.kts`에 `implementation(project(":libs:common"))` 의존성 추가
+2. `src/main/resources/logback-spring.xml` 생성 → `<include resource="logback-base.xml"/>` 
+3. K8s manifest에 환경변수 추가: `SERVICE_NAME`, `APP_VERSION`, `APP_ENVIRONMENT`
+4. prod overlay에 `APP_ENVIRONMENT=prod` 패치 추가
+5. `deploy.yml`에 해당 서비스의 `APP_VERSION` 주입 추가
+
 ## 흐름 문서
 
 각 API 흐름별 로그 필드와 출력 시점은 `flows/` 디렉토리에 문서화한다.
