@@ -35,6 +35,35 @@ patches:
         value:
           name: SPRING_PROFILES_ACTIVE
           value: "prod"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: MONGO_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: MONGO_ROOT_USERNAME
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: MONGO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: MONGO_ROOT_PASSWORD
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SPRING_DATA_MONGODB_URI
+          value: "mongodb://$(MONGO_ROOT_USERNAME):$(MONGO_ROOT_PASSWORD)@mongodb.data.svc.cluster.local:27017/bara-auth?authSource=admin"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: REDIS_PASSWORD
   - target:
       kind: Deployment
       name: fe
@@ -47,3 +76,39 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
+  - target:
+      kind: StatefulSet
+      name: mongodb
+      namespace: data
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: data-secrets
+                key: MONGO_ROOT_USERNAME
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: data-secrets
+                key: MONGO_ROOT_PASSWORD
+  - target:
+      kind: Deployment
+      name: redis
+      namespace: data
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: data-secrets
+                key: REDIS_PASSWORD
+      - op: add
+        path: /spec/template/spec/containers/0/args
+        value:
+          - "--requirepass"
+          - "$(REDIS_PASSWORD)"
