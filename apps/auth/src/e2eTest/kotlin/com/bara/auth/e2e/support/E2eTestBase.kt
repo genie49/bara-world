@@ -9,14 +9,11 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 import java.security.KeyPairGenerator
 import java.util.Base64
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("e2e")
-@Testcontainers
 abstract class E2eTestBase {
 
     @Autowired
@@ -33,19 +30,15 @@ abstract class E2eTestBase {
     }
 
     companion object {
-        @Container
         @JvmStatic
         val mongo: GenericContainer<*> = GenericContainer("mongo:7")
             .withExposedPorts(27017)
 
-        @Container
         @JvmStatic
         val redis: GenericContainer<*> = GenericContainer("redis:7-alpine")
             .withExposedPorts(6379)
 
         init {
-            // Eagerly start containers so that DynamicPropertySource can access mapped ports
-            // even when @TestInstance(PER_CLASS) changes the extension lifecycle ordering.
             mongo.start()
             redis.start()
         }
