@@ -37,11 +37,3 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
-  - target:
-      kind: ConfigMap
-      name: auth-config
-      namespace: core
-    patch: |
-      - op: replace
-        path: /data/google-redirect-uri
-        value: "https://bara.world/auth/google/callback"
