@@ -17,10 +17,57 @@ PORT=8090                             # 헬스체크용
 
 ## 동작 흐름
 
+### 태스크 처리
+
+```mermaid
+sequenceDiagram
+    participant API as API Service
+    participant K as Kafka
+    participant DA as Default Agent
+    participant LLM as Gemini LLM
+
+    API->>K: tasks.{agent-id} 발행
+    K-->>DA: TaskConsumer 수신
+    DA->>DA: TaskMessage 역직렬화
+    DA->>LLM: ChatAgent.invoke()
+    LLM-->>DA: 응답
+    DA->>K: result_topic 발행 (TaskResult)
+    K-->>API: 결과 수신
 ```
-[Kafka] tasks.{AGENT_ID} → Consumer → ChatAgent.invoke() → Producer → result_topic
-                                                          → Producer → heartbeat (20초 간격)
-[HTTP]  GET /health/* → 헬스체크만 유지
+
+### Heartbeat
+
+```mermaid
+sequenceDiagram
+    participant DA as Default Agent
+    participant K as Kafka
+    participant API as API Service
+
+    loop 20초 간격
+        DA->>K: heartbeat 토픽 발행
+        K-->>API: 수신 → Redis TTL 갱신
+    end
+```
+
+### 내부 컴포넌트 구조
+
+```mermaid
+graph LR
+    subgraph Default Agent
+        HC[HealthCheck<br/>GET /health/*]
+        TC[TaskConsumer<br/>tasks.agent-id]
+        CA[ChatAgent<br/>LangChain + Gemini]
+        RP[ResultProducer]
+        HB[HeartbeatLoop<br/>20초 간격]
+    end
+
+    K[Kafka Broker]
+
+    K -->|consume| TC
+    TC --> CA
+    CA --> RP
+    RP -->|produce| K
+    HB -->|produce| K
 ```
 
 ## 제거 대상
