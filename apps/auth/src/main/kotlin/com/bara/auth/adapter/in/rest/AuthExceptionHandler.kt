@@ -11,6 +11,7 @@ import com.bara.auth.domain.exception.ProviderAlreadyExistsException
 import com.bara.auth.domain.exception.ProviderNotActiveException
 import com.bara.auth.domain.exception.ProviderNotFoundException
 import com.bara.common.logging.WideEvent
+import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.net.URI
 
-data class ErrorResponse(val error: String, val message: String)
+@Schema(description = "에러 응답")
+data class ErrorResponse(
+    @field:Schema(description = "에러 코드", example = "invalid_token")
+    val error: String,
+    @field:Schema(description = "에러 메시지", example = "토큰이 만료되었거나 유효하지 않습니다")
+    val message: String,
+)
 
 @RestControllerAdvice
 class AuthExceptionHandler(
