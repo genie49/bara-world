@@ -10,6 +10,18 @@ from langgraph.checkpoint.memory import MemorySaver
 MODEL_NAME = "gemini-3.1-flash-lite-preview"
 
 
+def _extract_text(content) -> str:
+    """Extract text from LangChain message content (str or list of parts)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in content
+        )
+    return str(content)
+
+
 class ChatAgent:
     def __init__(self, api_key: str) -> None:
         os.environ.setdefault("GOOGLE_API_KEY", api_key)
@@ -30,7 +42,7 @@ class ChatAgent:
             {"messages": [{"role": "user", "content": message}]},
             config=config,
         )
-        return result["messages"][-1].content
+        return _extract_text(result["messages"][-1].content)
 
     async def astream(
         self, message: str, context_id: str | None = None
@@ -43,5 +55,6 @@ class ChatAgent:
         ):
             if event["event"] == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
-                if chunk.content:
-                    yield chunk.content
+                text = _extract_text(chunk.content)
+                if text:
+                    yield text
