@@ -51,3 +51,41 @@ spec:
       services:
         - name: fe
           port: 5173
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-public
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core/swagger-ui`) || PathPrefix(`/api/core/v3/api-docs`)
+      kind: Rule
+      middlewares:
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-protected
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core`)
+      kind: Rule
+      middlewares:
+        - name: auth-forward
+          namespace: core
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082
