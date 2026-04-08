@@ -57,6 +57,8 @@ async def handle_task(request: Request) -> JSONResponse:
     rpc_request = result
 
     agent = request.app.state.agent
+    if not rpc_request.params.message.parts:
+        return _error_response(rpc_request.id, -32600, "Empty message parts")
     text = rpc_request.params.message.parts[0].text
     context_id = rpc_request.params.context_id
 
@@ -97,6 +99,8 @@ async def handle_task_stream(request: Request):
     rpc_request = result
 
     agent = request.app.state.agent
+    if not rpc_request.params.message.parts:
+        return _error_response(rpc_request.id, -32600, "Empty message parts")
     text = rpc_request.params.message.parts[0].text
     context_id = rpc_request.params.context_id
 
@@ -104,7 +108,16 @@ async def handle_task_stream(request: Request):
         accumulated = ""
         pending_chunk = None
 
-        async for chunk in agent.astream(text, context_id=context_id):
+        try:
+            stream = agent.astream(text, context_id=context_id)
+        except Exception:
+            logger.exception("LLM stream init failed")
+            yield {"event": "message", "data": JsonRpcError(
+                id=rpc_request.id, error={"code": -32603, "message": "Internal error"}
+            ).model_dump_json(by_alias=True)}
+            return
+
+        async for chunk in stream:
             if pending_chunk is not None:
                 accumulated += pending_chunk
                 event_data = JsonRpcResponse(
