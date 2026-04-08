@@ -55,7 +55,7 @@ create_cluster() {
         --port "80:80@loadbalancer" \
         --port "27017:30017@server:0" \
         --port "6379:30379@server:0" \
-        --port "9092:30092@server:0" \
+        --port "30092:30092@server:0" \
         --volume "$K8S_DIR/base/gateway/traefik-config.yaml:/var/lib/rancher/k3s/server/manifests/traefik-config.yaml@server:0" \
         --wait
 
