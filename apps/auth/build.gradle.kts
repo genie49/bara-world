@@ -29,9 +29,7 @@ configurations[e2eTestSourceSet.implementationConfigurationName].extendsFrom(con
 configurations[e2eTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(configurations.runtimeOnly.get())
 
 dependencies {
-    "e2eTestImplementation"(libs.spring.boot.starter.test)
-    "e2eTestImplementation"(libs.testcontainers.core)
-    "e2eTestImplementation"(libs.testcontainers.junit.jupiter)
+    "e2eTestImplementation"(project(":libs:common-test"))
 }
 
 tasks.register<Test>("e2eTest") {
