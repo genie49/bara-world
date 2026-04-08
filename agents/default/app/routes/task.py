@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
+from app.logging import WideEvent
 from app.models.a2a import (
     A2AMessage,
     JsonRpcError,
@@ -62,11 +63,20 @@ async def handle_task(request: Request) -> JSONResponse:
     text = rpc_request.params.message.parts[0].text
     context_id = rpc_request.params.context_id
 
+    WideEvent.put("task_id", rpc_request.params.id)
+    WideEvent.put("context_id", context_id)
+    WideEvent.put("rpc_method", rpc_request.method)
+
     try:
         response_text = await agent.invoke(text, context_id=context_id)
     except Exception:
+        WideEvent.put("outcome", "error")
+        WideEvent.message("LLM invocation failed")
         logger.exception("LLM invocation failed")
         return _error_response(rpc_request.id, -32603, "Internal error")
+
+    WideEvent.put("outcome", "success")
+    WideEvent.message("task completed")
 
     response = JsonRpcResponse(
         id=rpc_request.id,
@@ -103,6 +113,12 @@ async def handle_task_stream(request: Request):
         return _error_response(rpc_request.id, -32600, "Empty message parts")
     text = rpc_request.params.message.parts[0].text
     context_id = rpc_request.params.context_id
+
+    WideEvent.put("task_id", rpc_request.params.id)
+    WideEvent.put("context_id", context_id)
+    WideEvent.put("rpc_method", rpc_request.method)
+    WideEvent.put("streaming", True)
+    WideEvent.message("task stream started")
 
     async def event_generator() -> AsyncGenerator[dict, None]:
         accumulated = ""
