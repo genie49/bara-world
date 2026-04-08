@@ -7,6 +7,7 @@ resources:
   - data/redis.yaml
   - data/kafka.yaml
   - core/auth.yaml
+  - core/api.yaml
   - core/fe.yaml
   - gateway/middlewares.yaml
   - gateway/routes.yaml

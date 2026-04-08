@@ -3,7 +3,7 @@ spring:
     name: bara-auth
   data:
     mongodb:
-      uri: mongodb://localhost:27017/bara-auth
+      uri: mongodb://localhost:27017/bara
     redis:
       host: localhost
       port: 6379
