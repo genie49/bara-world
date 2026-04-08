@@ -4,7 +4,7 @@ from app.config import Settings
 def test_settings_defaults():
     settings = Settings(google_api_key="test-key")
     assert settings.agent_id == "default-agent"
-    assert settings.kafka_bootstrap_servers == "localhost:9092"
+    assert settings.kafka_bootstrap_servers == "localhost:30092"
     assert settings.port == 8090
 
 
