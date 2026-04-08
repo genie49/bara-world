@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -8,8 +8,14 @@ from app.main import create_app
 
 @pytest.fixture
 def app():
-    with patch("app.main.ChatAgent"):
-        return create_app()
+    with patch("app.main.ChatAgent"), \
+         patch("app.main.ResultProducer") as mock_prod_cls, \
+         patch("app.main.TaskConsumer") as mock_cons_cls, \
+         patch("app.main.HeartbeatLoop") as mock_hb_cls:
+        mock_prod_cls.return_value = AsyncMock()
+        mock_cons_cls.return_value = AsyncMock()
+        mock_hb_cls.return_value = AsyncMock()
+        yield create_app()
 
 
 @pytest.mark.asyncio
