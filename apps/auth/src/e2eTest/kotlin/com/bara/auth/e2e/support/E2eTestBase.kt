@@ -1,5 +1,8 @@
 package com.bara.auth.e2e.support
 
+import com.bara.test.DatabaseCleaner
+import com.bara.test.MongoContainerSupport
+import com.bara.test.RedisContainerSupport
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -8,7 +11,6 @@ import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.GenericContainer
 import java.security.KeyPairGenerator
 import java.util.Base64
 
@@ -23,34 +25,16 @@ abstract class E2eTestBase {
     lateinit var mongoTemplate: MongoTemplate
 
     @BeforeEach
-    fun cleanDatabase() {
-        mongoTemplate.db.listCollectionNames().forEach { name ->
-            mongoTemplate.db.getCollection(name).deleteMany(org.bson.Document())
-        }
+    open fun cleanDatabase() {
+        DatabaseCleaner.clean(mongoTemplate)
     }
 
     companion object {
         @JvmStatic
-        val mongo: GenericContainer<*> = GenericContainer("mongo:7")
-            .withExposedPorts(27017)
-
-        @JvmStatic
-        val redis: GenericContainer<*> = GenericContainer("redis:7-alpine")
-            .withExposedPorts(6379)
-
-        init {
-            mongo.start()
-            redis.start()
-        }
-
-        @JvmStatic
         @DynamicPropertySource
         fun containerProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.data.mongodb.uri") {
-                "mongodb://${mongo.host}:${mongo.getMappedPort(27017)}/bara-auth-e2e"
-            }
-            registry.add("spring.data.redis.host") { redis.host }
-            registry.add("spring.data.redis.port") { redis.getMappedPort(6379) }
+            MongoContainerSupport.register(registry, dbName = "bara-auth-e2e")
+            RedisContainerSupport.register(registry)
 
             val kp = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
             val privPem = toPem("PRIVATE KEY", kp.private.encoded)
