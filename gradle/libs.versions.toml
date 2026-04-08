@@ -22,6 +22,7 @@ springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmoc
 java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
 google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }

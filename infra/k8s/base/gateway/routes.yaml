@@ -73,13 +73,31 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: api-protected
+  name: api-read
   namespace: core
 spec:
   entryPoints:
     - web
   routes:
-    - match: PathPrefix(`/api/core`)
+    - match: PathPrefix(`/api/core/agents`) && Method(`GET`)
+      kind: Rule
+      middlewares:
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-write
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core/agents`) && (Method(`POST`) || Method(`DELETE`))
       kind: Rule
       middlewares:
         - name: auth-forward

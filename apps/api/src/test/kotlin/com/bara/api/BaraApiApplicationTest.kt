@@ -1,5 +1,7 @@
 package com.bara.api
 
+import com.bara.api.application.port.out.AgentRepository
+import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.TestPropertySource
@@ -14,6 +16,9 @@ import org.springframework.test.context.TestPropertySource
     ]
 )
 class BaraApiApplicationTest {
+
+    @MockkBean
+    lateinit var agentRepository: AgentRepository
 
     @Test
     fun contextLoads() {

@@ -12,6 +12,9 @@ images:
   - name: bara/fe
     newName: asia-northeast3-docker.pkg.dev/bara-world/bara/fe
     newTag: latest
+  - name: bara/api
+    newName: asia-northeast3-docker.pkg.dev/bara-world/bara/api
+    newTag: latest
 
 patches:
   - target:
@@ -67,6 +70,29 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: registry-credentials
+  - target:
+      kind: Deployment
+      name: api
+      namespace: core
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: registry-credentials
+      - op: test
+        path: /spec/template/spec/containers/0/env/0/name
+        value: SPRING_DATA_MONGODB_URI
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0
+        value:
+          name: SPRING_DATA_MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: MONGODB_URI
   - target:
       kind: StatefulSet
       name: mongodb
