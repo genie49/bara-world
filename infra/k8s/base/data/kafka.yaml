@@ -67,3 +67,18 @@ spec:
     - port: 9094
       targetPort: 9094
       name: external
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-external
+  namespace: data
+spec:
+  type: NodePort
+  selector:
+    app: kafka
+  ports:
+    - port: 9094
+      targetPort: 9094
+      nodePort: 30092
+      name: external
