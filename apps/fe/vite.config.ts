@@ -7,8 +7,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/auth/google': {
+      '/api/auth': {
         target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
+      '/api/core': {
+        target: 'http://localhost:8082',
         changeOrigin: true,
       },
     },

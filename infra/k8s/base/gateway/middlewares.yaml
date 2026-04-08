@@ -1,0 +1,34 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: auth-forward
+  namespace: core
+spec:
+  forwardAuth:
+    address: http://auth.core.svc.cluster.local:8081/api/auth/validate
+    authResponseHeaders:
+      - X-User-Id
+      - X-User-Role
+      - X-Provider-Id
+      - X-Request-Id
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cors
+  namespace: core
+spec:
+  headers:
+    accessControlAllowOriginList:
+      - 'http://localhost'
+      - 'https://baraworlds.com'
+    accessControlAllowMethods:
+      - GET
+      - POST
+      - PATCH
+      - DELETE
+      - OPTIONS
+    accessControlAllowHeaders:
+      - Authorization
+      - Content-Type
+    accessControlMaxAge: 86400

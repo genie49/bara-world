@@ -53,7 +53,7 @@ graph TD
 | 구성 요소         | 역할                                                                           |
 | ----------------- | ------------------------------------------------------------------------------ |
 | Traefik           | 통합 Gateway (K3s 내장), K8s Gateway API 기반 경로 라우팅                      |
-| Auth Service      | Google OAuth 처리, JWT 발급, Provider 토큰 관리, Kafka 토큰 발급               |
+| Auth Service      | Google OAuth → Access/Refresh Token 발급, Provider API Key 관리, Kafka 토큰 발급 |
 | API Service       | Agent 등록/조회, Agent Card proxy, Kafka 계정 자동 생성, 태스크 발행/결과 수신 |
 | MongoDB           | User, Provider 정보 저장                                                       |
 | Redis             | Agent heartbeat, SSE 버퍼, 텔레그램 세션                                       |

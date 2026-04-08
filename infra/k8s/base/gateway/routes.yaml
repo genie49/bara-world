@@ -1,53 +1,109 @@
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
 metadata:
-  name: auth-callback-route
+  name: auth-public
   namespace: core
 spec:
-  parentRefs:
-    - name: traefik-gateway
-      namespace: kube-system
-  rules:
-    - matches:
-        - path:
-            type: Exact
-            value: /auth/callback
-      backendRefs:
-        - name: fe
-          port: 5173
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: auth-route
-  namespace: core
-spec:
-  parentRefs:
-    - name: traefik-gateway
-      namespace: kube-system
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /auth
-      backendRefs:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/auth/google`) || Path(`/api/auth/refresh`) || Path(`/api/auth/validate`) || PathPrefix(`/api/auth/swagger-ui`) || PathPrefix(`/api/auth/v3/api-docs`)
+      kind: Rule
+      middlewares:
+        - name: cors
+          namespace: core
+      services:
         - name: auth
           port: 8081
 ---
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: auth-protected
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/auth/provider`)
+      kind: Rule
+      middlewares:
+        - name: auth-forward
+          namespace: core
+        - name: cors
+          namespace: core
+      services:
+        - name: auth
+          port: 8081
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
 metadata:
   name: fe-route
   namespace: core
 spec:
-  parentRefs:
-    - name: traefik-gateway
-      namespace: kube-system
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/`)
+      kind: Rule
+      priority: 1
+      services:
         - name: fe
           port: 5173
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-public
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core/swagger-ui`) || PathPrefix(`/api/core/v3/api-docs`) || PathPrefix(`/api/core/actuator`)
+      kind: Rule
+      middlewares:
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-read
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core/agents`) && Method(`GET`)
+      kind: Rule
+      middlewares:
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api-write
+  namespace: core
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/core/agents`) && (Method(`POST`) || Method(`DELETE`))
+      kind: Rule
+      middlewares:
+        - name: auth-forward
+          namespace: core
+        - name: cors
+          namespace: core
+      services:
+        - name: api
+          port: 8082

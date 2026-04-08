@@ -40,6 +40,8 @@ type(scope): subject
 | `scheduler` | 스케줄러 서비스                |
 | `sdk`       | SDK (Python, TypeScript, Java) |
 | `infra`     | 인프라, 빌드, 도구 설정        |
+| `fe`        | 웹 FE (apps/fe)                |
+| `clients`   | 클라이언트 (clients/)          |
 | `docs`      | 문서                           |
 
 새로운 scope가 필요하면 `.commitlintrc.json`의 `scope-enum`에 추가합니다.

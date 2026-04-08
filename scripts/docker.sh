@@ -8,6 +8,7 @@ IMAGE_PREFIX="bara"
 # 형식: "name|dockerfile_path"
 SERVICES=(
     "auth|apps/auth/Dockerfile"
+    "api|apps/api/Dockerfile"
     "fe|apps/fe/Dockerfile"
 )
 

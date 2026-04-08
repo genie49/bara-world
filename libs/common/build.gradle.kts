@@ -10,6 +10,7 @@ dependencyManagement {
 }
 
 dependencies {
+    api(libs.springdoc.openapi.webmvc.ui)
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation(libs.logstash.logback.encoder)
 

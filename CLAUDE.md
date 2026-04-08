@@ -19,7 +19,7 @@ npm install    # Husky Git hooks 자동 설정 (prepare 스크립트)
 # 전체 빌드
 ./gradlew build
 
-# Auth Service 실행 (8081, .env 자동 로드)
+# Auth Service 실행 (8081, context-path: /api/auth, .env 자동 로드)
 ./gradlew :apps:auth:bootRun
 
 # Frontend 실행 (5173)
@@ -99,6 +99,14 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 커밋/브랜치 규칙은 Husky hooks로 자동 검증된다. 커밋 전에 반드시 `docs/guides/git-convention.md`를 확인할 것.
 
+### 커밋 시 필수 규칙
+
+- **`Co-Authored-By` 트레일러 금지** — `.husky/commit-msg` 훅이 차단함. 커밋 메시지에 절대 포함하지 말 것.
+- **`--no-verify` 사용 금지** — Git hooks를 우회하면 안 됨.
+- **Subagent/Agent 호출 시에도 반드시 전달할 것:**
+  - "커밋 메시지에 Co-Authored-By 트레일러를 붙이지 마라."
+  - "git commit 시 --no-verify 플래그를 사용하지 마라."
+
 ## Logging
 
 - Wide Event 패턴 사용 — 요청당 서비스당 단일 구조화 로그 출력 (dev: 텍스트, prod: JSON)
@@ -106,6 +114,11 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 - `WideEvent.put()` — 구조화 필드, `WideEvent.message()` — 사람이 읽을 수 있는 로그 메시지
 - 새 port/adapter/엔드포인트 추가 시 반드시 `docs/guides/logging/README.md` 참조
 - 해당 흐름의 비즈니스 컨텍스트 로깅 필드를 정의하고 `docs/guides/logging/flows/`에 문서 추가
+- **PR 전 로깅 체크리스트:**
+  - 새 엔드포인트/흐름에 `WideEvent.put()` + `WideEvent.message()` 추가했는가?
+  - `outcome` 필드가 성공/실패 경로 모두에 설정되었는가?
+  - `user_id` 등 비즈니스 컨텍스트 필드가 포함되었는가?
+  - `docs/guides/logging/flows/`에 해당 흐름 문서를 추가/업데이트했는가?
 
 ## Architecture
 
@@ -113,8 +126,8 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 
 핵심 구성:
 
-- **Auth Service** — Google OAuth → JWT 발급, Provider 토큰 관리, Kafka OAUTHBEARER 토큰
-- **API Service** — Agent 등록/조회, 태스크 처리(동기+SSE), Agent Card proxy
+- **Auth Service** — Google OAuth → Access/Refresh Token 발급, Provider API Key 관리, Kafka OAUTHBEARER 토큰, Traefik forwardAuth (`GET /api/auth/validate`)
+- **API Service** — Agent 등록/조회/삭제 (MongoDB CRUD ✓), Agent Card ✓, 태스크 처리(동기+SSE) ○, Kafka 연동 ○
 - **Scheduler Service** — cron 기반 반복 태스크 발행, 결과 전달
 - **SDK** — Python, TypeScript, Java 공용 SDK (Kafka 통신, 인증, 메시지 포맷팅)
 - **Clients** — Web FE, Telegram

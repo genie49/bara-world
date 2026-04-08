@@ -2,26 +2,26 @@
 
 ## 위협 매트릭스
 
-| 위협                 | 심각도 | 대응                                                       |
-| -------------------- | ------ | ---------------------------------------------------------- |
-| 패킷 스니핑          | 높음   | 전 구간 TLS 강제 (내부 mTLS는 후순위)                      |
-| MITM (중간자 공격)   | 높음   | TLS, Agent Card 서명 (mTLS는 후순위)                       |
-| JWT 위조             | 높음   | RS256, 알고리즘 고정                                       |
-| 토큰 탈취/재사용     | 높음   | 짧은 만료, JTI 1회용                                       |
-| X-User-Id 스푸핑     | 높음   | Nginx 헤더 제거 후 덮어씌움                                |
-| Agent Card 스푸핑    | 높음   | 서명 검증, 등록 인증                                       |
-| Redis 직접 접근      | 높음   | bind 제한, TLS, AUTH                                       |
-| Kafka 자격증명 탈취  | 높음   | 단기 OAUTHBEARER 토큰, Provider 차단 시 갱신 불가          |
-| Provider 토큰 탈취   | 높음   | 만료 주기 (30~90일), Admin이 즉시 비활성화(SUSPENDED) 가능 |
-| Kafka 토픽 무단 접근 | 높음   | SASL + ACL                                                 |
-| Kafka 메시지 위변조  | 높음   | TLS + 메시지 서명                                          |
-| Webhook SSRF         | 높음   | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지 |
-| 스케줄 남용          | 높음   | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증       |
-| 미허가 Agent 호출    | 높음   | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증 |
-| 권한 상승            | 중간   | 토큰 서명, 권한 검증                                       |
-| Task Replay          | 중간   | JTI, Idempotency Key                                       |
-| DDoS                 | 중간   | Cloudflare, Rate Limiting, 캐싱                            |
-| Kafka 토픽 폭주      | 중간   | Provider별 Rate Limit                                      |
+| 위협                  | 심각도 | 대응                                                           |
+| --------------------- | ------ | -------------------------------------------------------------- |
+| 패킷 스니핑           | 높음   | 전 구간 TLS 강제 (내부 mTLS는 후순위)                          |
+| MITM (중간자 공격)    | 높음   | TLS, Agent Card 서명 (mTLS는 후순위)                           |
+| JWT 위조              | 높음   | RS256, 알고리즘 고정                                           |
+| 토큰 탈취/재사용      | 높음   | 짧은 만료, JTI 1회용                                           |
+| X-User-Id 스푸핑      | 높음   | Nginx 헤더 제거 후 덮어씌움                                    |
+| Agent Card 스푸핑     | 높음   | 서명 검증, 등록 인증                                           |
+| Redis 직접 접근       | 높음   | bind 제한, TLS, AUTH                                           |
+| Kafka 자격증명 탈취   | 높음   | 단기 OAUTHBEARER 토큰, API Key 삭제/Provider 차단 시 갱신 불가 |
+| Provider API Key 탈취 | 높음   | API Key 즉시 삭제로 차단, Provider SUSPENDED로 전체 차단       |
+| Kafka 토픽 무단 접근  | 높음   | SASL + ACL                                                     |
+| Kafka 메시지 위변조   | 높음   | TLS + 메시지 서명                                              |
+| Webhook SSRF          | 높음   | HTTPS 강제, Private IP/메타데이터 차단, DNS Rebinding 방지     |
+| 스케줄 남용           | 높음   | 사용자당 30개 제한, cron 최소 10분 간격, 표현식 검증           |
+| 미허가 Agent 호출     | 높음   | Agent 화이트리스트 + allowed_agents 메시지 포함 + SDK 검증     |
+| 권한 상승             | 중간   | 토큰 서명, 권한 검증                                           |
+| Task Replay           | 중간   | JTI, Idempotency Key                                           |
+| DDoS                  | 중간   | Cloudflare, Rate Limiting, 캐싱                                |
+| Kafka 토픽 폭주       | 중간   | Provider별 Rate Limit                                          |
 
 ## 네트워크 레이어
 
@@ -57,7 +57,7 @@
 
 - 짧은 만료시간: User JWT 1시간, Agent 간 토큰 5분
 - JTI(JWT ID) 클레임: Redis에 사용된 JTI 저장, 1회 사용 후 무효화
-- Refresh Token: 별도 보관, Rotate 방식 (상세 흐름은 구현 시 정의)
+- Refresh Token: Redis 7일 저장, Rotation + 재사용 감지 (Grace Period 30초). userId당 하나의 유효한 Refresh Token만 존재. 재사용 감지 시 token family 전체 무효화
 
 ### 토큰이 탈취되는 경로 (스니핑 아님)
 
@@ -69,16 +69,14 @@
 
 ### X-User-Id 스푸핑 방지
 
-Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후** Auth Service 검증 결과로 덮어씌운다.
+Traefik forwardAuth 미들웨어가 보호 대상 경로의 요청을 Auth Service `/api/auth/validate`로 전달한다. Auth Service 검증 결과로 반환된 헤더(`X-User-Id`, `X-User-Role`, `X-Provider-Id`, `X-Request-Id`)만 업스트림에 주입되며, 클라이언트가 보낸 동명 헤더는 무시된다.
 
-초기화 대상: `X-User-Id`, `X-User-Role`, `X-Agent-Id`, `X-Provider-Id`, `X-Gateway`
-
-> 헤더 주입 흐름 상세는 [인증 문서](../auth/authentication.md#nginx-헤더-주입) 참고.
+> 헤더 주입 흐름 상세는 [인증 문서](../auth/authentication.md#traefik-forwardauth-헤더-주입) 참고.
 
 ### Agent Card 스푸핑 방지
 
 - A2A v0.3 서명된 Agent Card 사용
-- API Service 등록 시 Provider 토큰 인증 필수
+- API Service 등록 시 API Key 인증 필수
 - Agent Card는 등록 시 Provider가 제출, API Service가 서명 검증 후 MongoDB에 저장
 - 등록 허가된 Provider만 등록 가능
 
@@ -106,7 +104,7 @@ Nginx에서 클라이언트가 보낸 모든 내부 헤더를 **초기화한 후
 Agent 서버는 HTTP를 노출하지 않으며, 모든 통신은 Kafka를 통해 이루어진다. Kafka 자격증명이 유일한 접속 수단이므로 보호가 중요하다.
 
 - OAUTHBEARER 단기 토큰 (1시간 만료)으로 탈취 시 피해 최소화
-- Provider 토큰 차단 시 Kafka 토큰 갱신 불가 → 연결 즉시 차단
+- API Key 삭제 시 Kafka 토큰 갱신 불가 → 최대 15분 이내 차단
 - Kafka 자격증명은 최초 등록 시 1회만 제공, 이후 명시적 재발급 필요
 
 ## Kafka 레이어

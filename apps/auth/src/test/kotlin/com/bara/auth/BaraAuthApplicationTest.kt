@@ -1,5 +1,7 @@
 package com.bara.auth
 
+import com.bara.auth.adapter.out.persistence.ApiKeyMongoDataRepository
+import com.bara.auth.adapter.out.persistence.ProviderMongoDataRepository
 import com.bara.auth.adapter.out.persistence.UserMongoDataRepository
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
@@ -22,13 +24,19 @@ import java.util.Base64
             "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration",
         "bara.auth.google.client-id=test-client",
         "bara.auth.google.client-secret=test-secret",
-        "bara.auth.google.redirect-uri=http://localhost:5173/auth/google/callback",
+        "bara.auth.google.redirect-uri=http://localhost:5173/api/auth/google/callback",
     ]
 )
 class BaraAuthApplicationTest {
 
     @MockkBean
     lateinit var userMongoDataRepository: UserMongoDataRepository
+
+    @MockkBean
+    lateinit var providerMongoDataRepository: ProviderMongoDataRepository
+
+    @MockkBean
+    lateinit var apiKeyMongoDataRepository: ApiKeyMongoDataRepository
 
     @MockkBean
     lateinit var stringRedisTemplate: StringRedisTemplate

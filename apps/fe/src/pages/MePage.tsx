@@ -1,31 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { clearToken, getToken } from '../lib/auth'
+import { getAccessToken } from '../lib/auth'
 import { decodeJwtPayload } from '../lib/jwt'
 
 export default function MePage() {
-  const navigate = useNavigate()
   const [token, setToken] = useState<string | null>(null)
   const [payload, setPayload] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
-    const t = getToken()
-    if (!t) {
-      navigate('/', { replace: true })
-      return
-    }
+    const t = getAccessToken()
+    if (!t) return
     setToken(t)
     try {
       setPayload(decodeJwtPayload(t))
     } catch {
       setPayload(null)
     }
-  }, [navigate])
-
-  function logout() {
-    clearToken()
-    navigate('/', { replace: true })
-  }
+  }, [])
 
   function copyToken() {
     if (token) navigator.clipboard.writeText(token)
@@ -34,7 +24,7 @@ export default function MePage() {
   if (!token) return null
 
   return (
-    <div className="min-h-screen p-8 max-w-2xl mx-auto">
+    <div>
       <h1 className="text-3xl font-bold mb-6">My Info</h1>
       {payload && (
         <div className="bg-gray-100 rounded-lg p-4 mb-6">
@@ -66,12 +56,6 @@ export default function MePage() {
           Copy token
         </button>
       </div>
-      <button
-        onClick={logout}
-        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-      >
-        Logout
-      </button>
     </div>
   )
 }

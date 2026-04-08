@@ -1,23 +1,27 @@
+// apps/fe/src/__tests__/auth.test.ts
 import { afterEach, describe, expect, it } from 'vitest'
-import { clearToken, getToken, saveToken } from '../lib/auth'
+import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from '../lib/auth'
 
 describe('auth storage', () => {
   afterEach(() => {
     localStorage.clear()
   })
 
-  it('saveToken 후 getToken으로 같은 값이 반환된다', () => {
-    saveToken('abc.def.ghi')
-    expect(getToken()).toBe('abc.def.ghi')
+  it('saveTokens 후 각각 조회 가능', () => {
+    saveTokens('access-123', 'refresh-456')
+    expect(getAccessToken()).toBe('access-123')
+    expect(getRefreshToken()).toBe('refresh-456')
   })
 
-  it('토큰이 없으면 getToken은 null을 반환한다', () => {
-    expect(getToken()).toBeNull()
+  it('토큰이 없으면 null 반환', () => {
+    expect(getAccessToken()).toBeNull()
+    expect(getRefreshToken()).toBeNull()
   })
 
-  it('clearToken 후 getToken은 null', () => {
-    saveToken('t')
-    clearToken()
-    expect(getToken()).toBeNull()
+  it('clearTokens 후 모두 null', () => {
+    saveTokens('a', 'r')
+    clearTokens()
+    expect(getAccessToken()).toBeNull()
+    expect(getRefreshToken()).toBeNull()
   })
 })

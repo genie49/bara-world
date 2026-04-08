@@ -12,7 +12,8 @@
 
 ## 기능
 
-- Google OAuth 로그인
+- Google OAuth 로그인 (Access/Refresh Token 저장, 자동 갱신)
+- Provider 설정 페이지 (Provider 등록, API Key 발급/목록/수정/삭제)
 - 텔레그램 연동 페이지
 - Agent 목록 조회 (API Service → Agent Card 정보 표시)
 - Agent 선택 후 대화 인터페이스

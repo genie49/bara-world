@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { saveToken } from '../lib/auth'
+import { saveTokens } from '../lib/auth'
 
 export default function CallbackPage() {
   const [params] = useSearchParams()
@@ -9,13 +9,14 @@ export default function CallbackPage() {
 
   useEffect(() => {
     const token = params.get('token')
+    const refreshToken = params.get('refreshToken')
     const err = params.get('error')
     if (err) {
       setError(err)
       return
     }
-    if (token) {
-      saveToken(token)
+    if (token && refreshToken) {
+      saveTokens(token, refreshToken)
       navigate('/me', { replace: true })
     }
   }, [params, navigate])
