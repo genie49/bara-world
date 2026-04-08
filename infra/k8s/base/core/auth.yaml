@@ -20,7 +20,7 @@ spec:
             - containerPort: 8081
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: 'mongodb://mongodb.data.svc.cluster.local:27017/bara-auth'
+              value: 'mongodb://mongodb.data.svc.cluster.local:27017/bara'
             - name: SPRING_DATA_REDIS_HOST
               value: 'redis.data.svc.cluster.local'
             - name: BARA_AUTH_JWT_PRIVATE_KEY
