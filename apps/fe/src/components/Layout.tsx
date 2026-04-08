@@ -38,6 +38,14 @@ export default function Layout() {
             >
               Provider 설정
             </NavLink>
+            <NavLink
+              to="/agents"
+              className={({ isActive }) =>
+                isActive ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-gray-900'
+              }
+            >
+              Agents
+            </NavLink>
           </nav>
           <button
             onClick={logout}
