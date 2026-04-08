@@ -107,21 +107,3 @@ spec:
       services:
         - name: api
           port: 8082
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: default-agent-route
-  namespace: core
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: PathPrefix(`/api/agent`)
-      kind: Rule
-      middlewares:
-        - name: cors
-          namespace: core
-      services:
-        - name: default-agent
-          port: 8090
