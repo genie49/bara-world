@@ -15,6 +15,9 @@ images:
   - name: bara/api
     newName: asia-northeast3-docker.pkg.dev/bara-world/bara/api
     newTag: latest
+  - name: bara/default-agent
+    newName: asia-northeast3-docker.pkg.dev/bara-world/bara/default-agent
+    newTag: latest
 
 patches:
   - target:
@@ -93,6 +96,23 @@ patches:
             secretKeyRef:
               name: auth-secrets
               key: MONGODB_URI
+  - target:
+      kind: Deployment
+      name: default-agent
+      namespace: core
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: registry-credentials
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_ENVIRONMENT
+          value: "prod"
   - target:
       kind: StatefulSet
       name: mongodb
