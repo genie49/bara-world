@@ -11,7 +11,7 @@ bara-world/
 ├── apps/                          # 실행 가능한 애플리케이션
 │   ├── auth/                      # ✓ Auth Service (Spring Boot)
 │   ├── fe/                        # ✓ 웹 FE (Vite + React, pnpm)
-│   ├── api/                       # ○ API Service (Spring Boot)
+│   ├── api/                       # ✓ API Service (Spring Boot)
 │   ├── scheduler/                 # ○ Scheduler Service (Spring Boot)
 │   └── telegram/                  # ○ Telegram Service
 ├── libs/                          # 공유 라이브러리
