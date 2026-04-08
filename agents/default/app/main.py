@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.agent.chat import ChatAgent
 from app.config import Settings
 from app.routes.agent_card import router as agent_card_router
+from app.routes.task import router as task_router
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Bara Default Agent", lifespan=lifespan)
     app.include_router(agent_card_router)
+    app.include_router(task_router)
     return app
 
 
