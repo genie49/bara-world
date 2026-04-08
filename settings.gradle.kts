@@ -6,5 +6,6 @@ rootProject.name = "bara-world"
 
 include(
     ":apps:auth",
+    ":apps:api",
     ":libs:common",
 )
