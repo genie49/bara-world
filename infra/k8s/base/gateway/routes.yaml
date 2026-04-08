@@ -61,7 +61,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: PathPrefix(`/api/core/swagger-ui`) || PathPrefix(`/api/core/v3/api-docs`)
+    - match: PathPrefix(`/api/core/swagger-ui`) || PathPrefix(`/api/core/v3/api-docs`) || PathPrefix(`/api/core/actuator`)
       kind: Rule
       middlewares:
         - name: cors
