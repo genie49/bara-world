@@ -8,4 +8,5 @@ include(
     ":apps:auth",
     ":apps:api",
     ":libs:common",
+    ":libs:common-test",
 )
