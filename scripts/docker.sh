@@ -10,7 +10,6 @@ SERVICES=(
     "auth|apps/auth/Dockerfile"
     "api|apps/api/Dockerfile"
     "fe|apps/fe/Dockerfile"
-    "default-agent|agents/default/Dockerfile"
 )
 
 # ── 유틸 ───────────────────────────────────────────────────

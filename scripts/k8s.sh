@@ -55,6 +55,7 @@ create_cluster() {
         --port "80:80@loadbalancer" \
         --port "27017:30017@server:0" \
         --port "6379:30379@server:0" \
+        --port "30092:30092@server:0" \
         --volume "$K8S_DIR/base/gateway/traefik-config.yaml:/var/lib/rancher/k3s/server/manifests/traefik-config.yaml@server:0" \
         --wait
 
@@ -83,7 +84,7 @@ delete_cluster() {
 # ── 배포 ───────────────────────────────────────────────────
 load_images() {
     echo "──── Docker 이미지 로드 ────"
-    k3d image import bara/auth:latest bara/api:latest bara/fe:latest bara/default-agent:latest -c "$CLUSTER_NAME"
+    k3d image import bara/auth:latest bara/api:latest bara/fe:latest -c "$CLUSTER_NAME"
     echo "✓ 이미지 로드 완료"
 
     # deployment가 존재하면 자동 재시작
@@ -92,7 +93,6 @@ load_images() {
         kubectl rollout restart deployment/auth -n core
         kubectl rollout restart deployment/api -n core
         kubectl rollout restart deployment/fe -n core
-        kubectl rollout restart deployment/default-agent -n core
         echo "✓ Pod 재시작 요청 완료"
     fi
 }

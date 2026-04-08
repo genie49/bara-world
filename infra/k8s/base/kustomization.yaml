@@ -9,6 +9,5 @@ resources:
   - core/auth.yaml
   - core/api.yaml
   - core/fe.yaml
-  - core/default-agent.yaml
   - gateway/middlewares.yaml
   - gateway/routes.yaml

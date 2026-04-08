@@ -30,14 +30,6 @@ patches:
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: Never
   - target:
-      kind: Deployment
-      name: default-agent
-      namespace: core
-    patch: |
-      - op: add
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
       kind: Service
       name: redis
       namespace: data
