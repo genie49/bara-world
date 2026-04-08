@@ -1,50 +1,47 @@
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import AsyncGenerator
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import MemorySaver
 
 MODEL_NAME = "gemini-3.1-flash-lite-preview"
 
 
 class ChatAgent:
     def __init__(self, api_key: str) -> None:
-        self._llm = ChatGoogleGenerativeAI(
-            model=MODEL_NAME,
-            google_api_key=api_key,
+        os.environ.setdefault("GOOGLE_API_KEY", api_key)
+        self._checkpointer = MemorySaver()
+        self._agent = create_agent(
+            model=f"google_genai:{MODEL_NAME}",
+            tools=[],
+            checkpointer=self._checkpointer,
         )
-        self._histories: dict[str, list[BaseMessage]] = {}
 
-    def _resolve_context_id(self, context_id: str | None) -> str:
-        if context_id is None:
-            return str(uuid.uuid4())
-        return context_id
-
-    def get_history(self, context_id: str) -> list[BaseMessage]:
-        return self._histories.get(context_id, [])
+    def _make_config(self, context_id: str | None) -> dict:
+        thread_id = context_id or str(uuid.uuid4())
+        return {"configurable": {"thread_id": thread_id}, "context_id": thread_id}
 
     async def invoke(self, message: str, context_id: str | None = None) -> str:
-        ctx = self._resolve_context_id(context_id)
-        history = self._histories.setdefault(ctx, [])
-        history.append(HumanMessage(content=message))
-
-        response = await self._llm.ainvoke(history)
-        history.append(AIMessage(content=response.content))
-        return response.content
+        config = self._make_config(context_id)
+        result = await self._agent.ainvoke(
+            {"messages": [{"role": "user", "content": message}]},
+            config=config,
+        )
+        return result["messages"][-1].content
 
     async def astream(
         self, message: str, context_id: str | None = None
     ) -> AsyncGenerator[str, None]:
-        ctx = self._resolve_context_id(context_id)
-        history = self._histories.setdefault(ctx, [])
-        history.append(HumanMessage(content=message))
-
-        full_response = ""
-        async for chunk in self._llm.astream(history):
-            full_response += chunk.content
-            yield chunk.content
-
-        history.append(AIMessage(content=full_response))
+        config = self._make_config(context_id)
+        async for event in self._agent.astream_events(
+            {"messages": [{"role": "user", "content": message}]},
+            config=config,
+            version="v2",
+        ):
+            if event["event"] == "on_chat_model_stream":
+                chunk = event["data"]["chunk"]
+                if chunk.content:
+                    yield chunk.content
