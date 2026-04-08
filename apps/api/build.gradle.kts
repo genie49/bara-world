@@ -15,3 +15,27 @@ dependencies {
     testImplementation(libs.springmockk)
     testImplementation(kotlin("test"))
 }
+
+// ── E2E Test source set ──
+
+val e2eTestSourceSet: SourceSet = sourceSets.create("e2eTest") {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+
+configurations[e2eTestSourceSet.implementationConfigurationName]
+    .extendsFrom(configurations.implementation.get())
+configurations[e2eTestSourceSet.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations.runtimeOnly.get())
+
+dependencies {
+    "e2eTestImplementation"(project(":libs:common-test"))
+}
+
+tasks.register<Test>("e2eTest") {
+    description = "Runs E2E tests"
+    group = "verification"
+    testClassesDirs = e2eTestSourceSet.output.classesDirs
+    classpath = e2eTestSourceSet.runtimeClasspath
+    useJUnitPlatform()
+}
