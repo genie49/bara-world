@@ -37,6 +37,12 @@ spec:
               value: "CONTROLLER"
             - name: KAFKA_ADVERTISED_LISTENERS
               value: "PLAINTEXT://kafka-0.kafka.data.svc.cluster.local:9092,EXTERNAL://localhost:30092"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
             - name: CLUSTER_ID
               value: "bara-k3s-cluster-001"
           volumeMounts:
