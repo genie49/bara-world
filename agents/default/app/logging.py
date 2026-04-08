@@ -3,11 +3,12 @@
 Python equivalent of the Kotlin WideEvent pattern:
 - One structured log per request
 - contextvars for async-safe context propagation
-- Dev: text format, Prod: JSON format
+- Dev: colored text format, Prod: JSON format
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -23,6 +24,12 @@ _wide_event_context: ContextVar[dict[str, Any]] = ContextVar("wide_event", defau
 _wide_event_message: ContextVar[str | None] = ContextVar("wide_event_message", default=None)
 
 logger = logging.getLogger("wide-event")
+
+# wide-event 필드 키 (dev 포맷에서 순서 보장)
+_FIELD_ORDER = [
+    "request_id", "method", "path", "status_code", "duration_ms",
+    "task_id", "context_id", "rpc_method", "outcome", "streaming", "error",
+]
 
 
 class WideEvent:
@@ -99,6 +106,86 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             WideEvent.clear()
 
 
+# ── Formatters ─────────────────────────────────────────────
+
+
+class DevFormatter(logging.Formatter):
+    """Dev: 사람이 읽기 편한 컬러 텍스트 포맷.
+
+    Example:
+      16:51:04 INFO  [wide-event] task completed | status=200 duration=42ms task_id=task-1
+    """
+
+    COLORS = {
+        "DEBUG": "\033[36m",     # cyan
+        "INFO": "\033[32m",      # green
+        "WARNING": "\033[33m",   # yellow
+        "ERROR": "\033[31m",     # red
+        "CRITICAL": "\033[35m",  # magenta
+    }
+    RESET = "\033[0m"
+
+    def format(self, record: logging.LogRecord) -> str:
+        color = self.COLORS.get(record.levelname, "")
+        ts = self.formatTime(record, "%H:%M:%S")
+        level = f"{color}{record.levelname:<5}{self.RESET}"
+        name = f"\033[36m{record.name}\033[0m"
+
+        # extra 필드를 순서대로 포맷
+        fields = {}
+        for key in _FIELD_ORDER:
+            val = getattr(record, key, None)
+            if val is not None:
+                fields[key] = val
+        # 나머지 커스텀 필드
+        for key, val in record.__dict__.items():
+            if key not in fields and key not in _DEFAULT_RECORD_KEYS and val is not None:
+                fields[key] = val
+
+        if fields:
+            parts = []
+            for k, v in fields.items():
+                if k == "duration_ms":
+                    parts.append(f"duration={v}ms")
+                elif k == "status_code":
+                    code_color = "\033[32m" if v < 400 else "\033[33m" if v < 500 else "\033[31m"
+                    parts.append(f"status={code_color}{v}{self.RESET}")
+                elif k == "error":
+                    parts.append(f"error=\033[31m{v}{self.RESET}")
+                else:
+                    parts.append(f"{k}={v}")
+            field_str = " ".join(parts)
+            return f"{ts} {level} [{name}] {record.getMessage()} | {field_str}"
+
+        return f"{ts} {level} [{name}] {record.getMessage()}"
+
+
+class JsonFormatter(logging.Formatter):
+    """Prod: 구조화 JSON 포맷 (Fluent Bit/Loki 수집용)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_data: dict[str, Any] = {
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "service": os.getenv("SERVICE_NAME", "bara-default-agent"),
+            "version": os.getenv("APP_VERSION", "local"),
+            "environment": "prod",
+        }
+        for key in _FIELD_ORDER:
+            val = getattr(record, key, None)
+            if val is not None:
+                log_data[key] = val
+        if record.exc_info and record.exc_info[1]:
+            log_data["exception"] = str(record.exc_info[1])
+        return json.dumps(log_data, ensure_ascii=False)
+
+
+# LogRecord 기본 키 — extra 필드 추출 시 제외용
+_DEFAULT_RECORD_KEYS = set(logging.LogRecord("", 0, "", 0, None, None, None).__dict__.keys())
+
+
 def setup_logging() -> None:
     """Configure logging based on APP_ENVIRONMENT."""
     env = os.getenv("APP_ENVIRONMENT", "dev")
@@ -109,54 +196,5 @@ def setup_logging() -> None:
         return
 
     handler = logging.StreamHandler()
-
-    if env == "prod":
-        import json
-
-        class JsonFormatter(logging.Formatter):
-            def format(self, record: logging.LogRecord) -> str:
-                log_data: dict[str, Any] = {
-                    "timestamp": self.formatTime(record),
-                    "level": record.levelname,
-                    "logger": record.name,
-                    "message": record.getMessage(),
-                    "service": os.getenv("SERVICE_NAME", "bara-default-agent"),
-                    "version": os.getenv("APP_VERSION", "local"),
-                    "environment": env,
-                }
-                if hasattr(record, "request_id"):
-                    for key in ("request_id", "method", "path", "status_code",
-                                "duration_ms", "error"):
-                        val = getattr(record, key, None)
-                        if val is not None:
-                            log_data[key] = val
-                if record.exc_info and record.exc_info[1]:
-                    log_data["exception"] = str(record.exc_info[1])
-                return json.dumps(log_data, ensure_ascii=False)
-
-        handler.setFormatter(JsonFormatter())
-    else:
-        handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)-5s [%(name)s] %(message)s | %(extra_fields)s",
-                datefmt="%H:%M:%S",
-                defaults={"extra_fields": ""},
-            )
-        )
-
-        class DevFormatter(logging.Formatter):
-            def format(self, record: logging.LogRecord) -> str:
-                extras = {k: v for k, v in record.__dict__.items()
-                          if k not in logging.LogRecord(
-                              "", 0, "", 0, None, None, None
-                          ).__dict__ and k != "extra_fields"}
-                extra_str = " ".join(f"{k}={v}" for k, v in extras.items()) if extras else ""
-                record.extra_fields = extra_str
-                return super().format(record)
-
-        handler.setFormatter(DevFormatter(
-            "%(asctime)s %(levelname)-5s [%(name)s] %(message)s | %(extra_fields)s",
-            datefmt="%H:%M:%S",
-        ))
-
+    handler.setFormatter(JsonFormatter() if env == "prod" else DevFormatter())
     root.addHandler(handler)
