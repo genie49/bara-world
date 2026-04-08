@@ -40,6 +40,7 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<AgentDetail | null>(null)
   const [showRegisterForm, setShowRegisterForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [apiKey, setApiKey] = useState('')
 
   // Register form state
   const [formName, setFormName] = useState('')
@@ -74,6 +75,7 @@ export default function AgentsPage() {
 
   async function registerAgent() {
     if (!formName.trim()) return
+    if (!apiKey.trim()) { setError('API Key를 입력해주세요'); return }
     setError(null)
 
     const body = {
@@ -91,9 +93,9 @@ export default function AgentsPage() {
       },
     }
 
-    const res = await apiFetch('/api/core/agents', {
+    const res = await fetch('/api/core/agents', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify(body),
     })
 
@@ -114,7 +116,11 @@ export default function AgentsPage() {
 
   async function deleteAgent(id: string) {
     if (!confirm('이 Agent를 삭제하시겠습니까?')) return
-    const res = await apiFetch(`/api/core/agents/${id}`, { method: 'DELETE' })
+    if (!apiKey.trim()) { setError('삭제하려면 API Key를 입력해주세요'); return }
+    const res = await fetch(`/api/core/agents/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    })
     if (res.ok) {
       if (selectedAgent?.id === id) setSelectedAgent(null)
       loadAgents()
@@ -127,6 +133,18 @@ export default function AgentsPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Agents</h1>
+
+      <div className="mb-6 p-4 bg-gray-50 border rounded">
+        <label className="block text-sm font-medium mb-1">API Key (등록/삭제에 필요)</label>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Provider 설정에서 발급한 API Key를 입력하세요"
+          className="w-full px-3 py-2 border rounded font-mono text-sm"
+        />
+        {apiKey && <p className="mt-1 text-xs text-green-600">API Key 입력됨</p>}
+      </div>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700">
