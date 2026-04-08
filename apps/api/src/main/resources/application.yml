@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: bara-api
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/bara
+
+server:
+  port: 8082
+  servlet:
+    context-path: /api/core
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+bara:
+  openapi:
+    title: Bara API
+    version: 1.0.0
+    description: Agent Registry & A2A Gateway API
