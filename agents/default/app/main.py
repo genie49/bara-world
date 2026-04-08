@@ -16,10 +16,7 @@ async def lifespan(app: FastAPI):
     load_dotenv()
     setup_logging()
     settings = Settings()
-    app.state.agent = ChatAgent(
-        model_name=settings.model_name,
-        api_key=settings.google_api_key,
-    )
+    app.state.agent = ChatAgent(api_key=settings.google_api_key)
     yield
 
 

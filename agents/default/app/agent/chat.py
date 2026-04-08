@@ -7,10 +7,13 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
+MODEL_NAME = "gemini-3.1-flash-lite-preview"
+
+
 class ChatAgent:
-    def __init__(self, model_name: str, api_key: str) -> None:
+    def __init__(self, api_key: str) -> None:
         self._llm = ChatGoogleGenerativeAI(
-            model=model_name,
+            model=MODEL_NAME,
             google_api_key=api_key,
         )
         self._histories: dict[str, list[BaseMessage]] = {}

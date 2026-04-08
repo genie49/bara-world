@@ -11,7 +11,7 @@ def agent():
         mock_llm = AsyncMock()
         mock_llm.ainvoke.return_value = AsyncMock(content="안녕하세요!")
         mock_cls.return_value = mock_llm
-        yield ChatAgent(model_name="test-model", api_key="test-key")
+        yield ChatAgent(api_key="test-key")
 
 
 @pytest.mark.asyncio
