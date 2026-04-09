@@ -4,7 +4,7 @@
 
 **Goal:** Replace Kafka-based heartbeat with HTTP-based heartbeat, unifying registration and heartbeat on a single transport.
 
-**Architecture:** Agent calls `POST /agents/{name}/registry` on startup (registration), then `PUT /agents/{name}/heartbeat` every 20s (liveness). API Service's existing HeartbeatConsumer (Kafka) is replaced by a new HeartbeatAgentService (HTTP handler). Agent gets a new RegistryClient (httpx) replacing HeartbeatLoop (aiokafka).
+**Architecture:** Agent calls `POST /agents/{name}/registry` on startup (registration), then `POST /agents/{name}/heartbeat` every 20s (liveness). API Service's existing HeartbeatConsumer (Kafka) is replaced by a new HeartbeatAgentService (HTTP handler). Agent gets a new RegistryClient (httpx) replacing HeartbeatLoop (aiokafka).
 
 **Tech Stack:** Kotlin + Spring Boot (API Service), Python + FastAPI + httpx (Agent), Redis (registry TTL)
 
@@ -19,7 +19,7 @@
 | Create | `apps/api/.../application/port/in/command/HeartbeatAgentUseCase.kt`     | Use case interface                                             |
 | Create | `apps/api/.../application/service/command/HeartbeatAgentService.kt`     | Heartbeat logic: verify registration + ownership + refresh TTL |
 | Create | `apps/api/.../domain/exception/AgentNotRegisteredException.kt`          | Agent not in Redis registry                                    |
-| Modify | `apps/api/.../adapter/in/rest/AgentController.kt`                       | Add `PUT /{agentName}/heartbeat` endpoint                      |
+| Modify | `apps/api/.../adapter/in/rest/AgentController.kt`                       | Add `POST /{agentName}/heartbeat` endpoint                     |
 | Delete | `apps/api/.../adapter/in/kafka/HeartbeatConsumer.kt`                    | Kafka heartbeat consumer                                       |
 | Delete | `apps/api/.../adapter/in/kafka/HeartbeatConsumerTest.kt`                | Consumer tests                                                 |
 | Modify | `apps/api/.../adapter/in/rest/ApiExceptionHandler.kt`                   | Add handler for AgentNotRegisteredException                    |
@@ -46,11 +46,11 @@
 
 ### Infrastructure & Docs
 
-| Action | File                                 | Responsibility                           |
-| ------ | ------------------------------------ | ---------------------------------------- |
-| Modify | `infra/k8s/base/gateway/routes.yaml` | Add PUT heartbeat route with forwardAuth |
-| Modify | `docs/spec/api/agent-registry.md`    | Update heartbeat section                 |
-| Modify | `CLAUDE.md`                          | Update architecture description          |
+| Action | File                                 | Responsibility                       |
+| ------ | ------------------------------------ | ------------------------------------ |
+| Modify | `infra/k8s/base/gateway/routes.yaml` | Add heartbeat route with forwardAuth |
+| Modify | `docs/spec/api/agent-registry.md`    | Update heartbeat section             |
+| Modify | `CLAUDE.md`                          | Update architecture description      |
 
 ---
 
@@ -238,7 +238,7 @@ git commit -m "feat(api): add HeartbeatAgentService for HTTP-based heartbeat"
 
 - [ ] **Step 1: Add heartbeat endpoint to AgentController**
 
-In `AgentController.kt`, add `HeartbeatAgentUseCase` to the constructor and add the `PUT` endpoint. The new constructor parameter goes after `registryAgentUseCase`:
+In `AgentController.kt`, add `HeartbeatAgentUseCase` to the constructor and add the `POST` endpoint. The new constructor parameter goes after `registryAgentUseCase`:
 
 Replace the constructor:
 
@@ -260,7 +260,7 @@ Add import: `import com.bara.api.application.port.\`in\`.command.HeartbeatAgentU
 Add endpoint after the `registry` method (after line 60):
 
 ```kotlin
-    @PutMapping("/{agentName}/heartbeat")
+    @PostMapping("/{agentName}/heartbeat")
     fun heartbeat(
         @RequestHeader("X-Provider-Id") providerId: String,
         @PathVariable agentName: String,
@@ -306,10 +306,10 @@ Add these test methods at the end of the class (before the closing `}`):
 
 ```kotlin
     @Test
-    fun `PUT agents heartbeat 성공 시 200`() {
+    fun `POST agents heartbeat 성공 시 200`() {
         justRun { heartbeatAgentUseCase.heartbeat("p-1", "my-agent") }
 
-        mockMvc.put("/agents/my-agent/heartbeat") {
+        mockMvc.post("/agents/my-agent/heartbeat") {
             header("X-Provider-Id", "p-1")
         }.andExpect {
             status { isOk() }
@@ -317,10 +317,10 @@ Add these test methods at the end of the class (before the closing `}`):
     }
 
     @Test
-    fun `PUT agents heartbeat 미등록 Agent 시 404`() {
+    fun `POST agents heartbeat 미등록 Agent 시 404`() {
         every { heartbeatAgentUseCase.heartbeat("p-1", "unknown") } throws AgentNotRegisteredException("unknown")
 
-        mockMvc.put("/agents/unknown/heartbeat") {
+        mockMvc.post("/agents/unknown/heartbeat") {
             header("X-Provider-Id", "p-1")
         }.andExpect {
             status { isNotFound() }
@@ -329,10 +329,10 @@ Add these test methods at the end of the class (before the closing `}`):
     }
 
     @Test
-    fun `PUT agents heartbeat 소유권 불일치 시 403`() {
+    fun `POST agents heartbeat 소유권 불일치 시 403`() {
         every { heartbeatAgentUseCase.heartbeat("p-1", "other-agent") } throws AgentOwnershipException()
 
-        mockMvc.put("/agents/other-agent/heartbeat") {
+        mockMvc.post("/agents/other-agent/heartbeat") {
             header("X-Provider-Id", "p-1")
         }.andExpect {
             status { isForbidden() }
@@ -340,7 +340,7 @@ Add these test methods at the end of the class (before the closing `}`):
     }
 ```
 
-Add import: `import com.bara.api.domain.exception.AgentNotRegisteredException` and `import org.springframework.test.web.servlet.put`
+Add import: `import com.bara.api.domain.exception.AgentNotRegisteredException`
 
 - [ ] **Step 4: Delete HeartbeatConsumer and its test**
 
@@ -360,7 +360,7 @@ Expected: All tests PASS. This includes the new heartbeat controller tests and s
 
 ```bash
 git add -A apps/api/
-git commit -m "feat(api): add PUT heartbeat endpoint and remove Kafka HeartbeatConsumer"
+git commit -m "feat(api): add POST heartbeat endpoint and remove Kafka HeartbeatConsumer"
 ```
 
 ---
@@ -556,7 +556,7 @@ class RegistryClient:
     async def heartbeat_loop(self) -> None:
         while True:
             try:
-                response = await self._client.put(
+                response = await self._client.post(
                     f"/agents/{self._agent_name}/heartbeat"
                 )
                 if response.status_code != 200:
@@ -822,27 +822,21 @@ git commit -m "refactor(agent): remove Kafka heartbeat, switch to HTTP-based hea
 
 - Modify: `infra/k8s/base/gateway/routes.yaml`
 
-- [ ] **Step 1: Add heartbeat route**
+- [ ] **Step 1: Verify heartbeat route**
 
-The `api-write` IngressRoute currently matches `POST` and `DELETE` methods. The PUT method for heartbeat needs forwardAuth. Add `PUT` to its method match.
+The `api-write` IngressRoute already matches `POST` method with forwardAuth. The new heartbeat endpoint (`POST /agents/{name}/heartbeat`) will be matched by the existing `api-write` route or the `api-agent-registry` route. Verify by checking that `POST` requests to `/api/core/agents/{name}/heartbeat` will hit the `api-write` or `api-agent-registry` IngressRoute.
 
-In `infra/k8s/base/gateway/routes.yaml`, find the `api-write` route (line 100) and change:
+The current `api-agent-registry` route matches `PathRegexp(\`/api/core/agents/[^/]+/registry\`)`. This does NOT match `/heartbeat`. The `api-write`route matches`PathPrefix(\`/api/core/agents\`) && (Method(\`POST\`) || Method(\`DELETE\`))`. This WILL match `POST /api/core/agents/{name}/heartbeat`.
 
-```yaml
-- match: PathPrefix(`/api/core/agents`) && (Method(`POST`) || Method(`DELETE`))
-```
-
-to:
-
-```yaml
-- match: PathPrefix(`/api/core/agents`) && (Method(`POST`) || Method(`PUT`) || Method(`DELETE`))
-```
+No changes needed to `routes.yaml` — the existing `api-write` route already covers `POST` to heartbeat.
 
 - [ ] **Step 2: Commit**
 
+If no changes were needed, skip commit. Otherwise:
+
 ```bash
 git add infra/k8s/base/gateway/routes.yaml
-git commit -m "feat(infra): add PUT method to api-write route for heartbeat"
+git commit -m "feat(infra): update routes for HTTP heartbeat"
 ```
 
 ---
@@ -863,7 +857,7 @@ Find the section starting with `### Heartbeat Consumer` and replace it with:
 ```markdown
 ### Heartbeat
 
-Agent가 HTTP `PUT /agents/{agentName}/heartbeat`를 20초 간격으로 호출하여 생존을 알린다.
+Agent가 HTTP `POST /agents/{agentName}/heartbeat`를 20초 간격으로 호출하여 생존을 알린다.
 
 처리:
 

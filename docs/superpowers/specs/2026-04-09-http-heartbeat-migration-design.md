@@ -6,13 +6,13 @@ Agent의 heartbeat transport를 Kafka에서 HTTP로 전환한다. 등록(initial
 
 ## 변경 요약
 
-| 항목                | 현재                         | 변경 후                             |
-| ------------------- | ---------------------------- | ----------------------------------- |
-| 초기 등록           | 외부에서 POST /registry 호출 | Agent 시작 시 자동 호출             |
-| Heartbeat transport | Kafka `heartbeat` 토픽       | HTTP `PUT /agents/{name}/heartbeat` |
-| Heartbeat 처리      | HeartbeatConsumer (Kafka)    | HeartbeatAgentService (HTTP)        |
-| Agent heartbeat     | HeartbeatLoop (aiokafka)     | RegistryClient (httpx)              |
-| 종료 시             | TTL 만료 대기 (60s)          | 동일 (변경 없음)                    |
+| 항목                | 현재                         | 변경 후                              |
+| ------------------- | ---------------------------- | ------------------------------------ |
+| 초기 등록           | 외부에서 POST /registry 호출 | Agent 시작 시 자동 호출              |
+| Heartbeat transport | Kafka `heartbeat` 토픽       | HTTP `POST /agents/{name}/heartbeat` |
+| Heartbeat 처리      | HeartbeatConsumer (Kafka)    | HeartbeatAgentService (HTTP)         |
+| Agent heartbeat     | HeartbeatLoop (aiokafka)     | RegistryClient (httpx)               |
+| 종료 시             | TTL 만료 대기 (60s)          | 동일 (변경 없음)                     |
 
 ## 전체 흐름
 
@@ -33,7 +33,7 @@ sequenceDiagram
 
     Note over A,R: 2. Heartbeat 루프
     loop 20초 간격
-        A->>T: PUT /agents/{name}/heartbeat (API Key)
+        A->>T: POST /agents/{name}/heartbeat (API Key)
         T->>API: forwardAuth → X-Provider-Id 주입
         API->>R: EXISTS agent:registry:{name}
         API->>DB: Agent 조회 + 소유권 검증
@@ -48,10 +48,10 @@ sequenceDiagram
 
 ## API Service (Kotlin)
 
-### 새 엔드포인트: PUT /agents/{agentName}/heartbeat
+### 새 엔드포인트: POST /agents/{agentName}/heartbeat
 
 ```
-PUT /api/core/agents/{agentName}/heartbeat
+POST /api/core/agents/{agentName}/heartbeat
 Header: Authorization: Bearer {api_key}
 ```
 
@@ -100,7 +100,7 @@ apps/api/src/main/kotlin/com/bara/api/
 │   ├── RegistryAgentService.kt        # 기존 유지
 │   └── HeartbeatAgentService.kt       # 신규
 ├── adapter/in/rest/
-│   └── AgentController.kt             # PUT heartbeat 엔드포인트 추가
+│   └── AgentController.kt             # POST heartbeat 엔드포인트 추가
 ├── adapter/in/kafka/
 │   └── HeartbeatConsumer.kt           # 삭제
 ```
@@ -206,7 +206,7 @@ async def lifespan(app: FastAPI):
 `infra/k8s/base/gateway/routes.yaml`에 추가. 기존 registry 라우트와 동일 패턴:
 
 ```yaml
-# PUT /api/core/agents/{name}/heartbeat → api-service
+# POST /api/core/agents/{name}/heartbeat → api-service
 ```
 
 forwardAuth 미들웨어 적용 (registry 라우트와 동일).
@@ -236,7 +236,7 @@ HEARTBEAT_INTERVAL=20
 ### API Service
 
 - `HeartbeatAgentServiceTest` — 정상 TTL 갱신, 미등록 에러, 소유권 불일치 에러
-- `AgentControllerTest` — PUT /heartbeat 슬라이스 테스트 (200, 403, 404)
+- `AgentControllerTest` — POST /heartbeat 슬라이스 테스트 (200, 403, 404)
 - 기존 `HeartbeatConsumerTest` 삭제
 
 ### Agent
