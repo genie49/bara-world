@@ -46,8 +46,3 @@ class TaskResult(BaseModel):
     agent_id: str
     status: TaskStatus
     final: bool
-
-
-class HeartbeatMessage(BaseModel):
-    agent_id: str
-    timestamp: str

@@ -1,7 +1,6 @@
 import json
 
 from app.models.messages import (
-    HeartbeatMessage,
     Message,
     Part,
     TaskMessage,
@@ -141,13 +140,3 @@ def test_serialize_task_result_failed():
     data = json.loads(result.model_dump_json(exclude_none=True))
     assert data["status"]["state"] == "failed"
     assert data["final"] is True
-
-
-def test_heartbeat_message():
-    hb = HeartbeatMessage(
-        agent_id="agent-001",
-        timestamp="2026-04-08T17:00:00Z",
-    )
-    data = json.loads(hb.model_dump_json())
-    assert data["agent_id"] == "agent-001"
-    assert data["timestamp"] == "2026-04-08T17:00:00Z"

@@ -4,7 +4,6 @@ import pytest
 
 from app.kafka.producer import ResultProducer
 from app.models.messages import (
-    HeartbeatMessage,
     Message,
     Part,
     TaskResult,
@@ -44,16 +43,6 @@ async def test_send_result(producer: ResultProducer):
     call_args = producer._producer.send_and_wait.call_args
     assert call_args[0][0] == "results.api"
     assert b"task-1" in call_args[1]["value"]
-
-
-@pytest.mark.asyncio
-async def test_send_heartbeat(producer: ResultProducer):
-    hb = HeartbeatMessage(agent_id="agent-001", timestamp="2026-04-08T17:00:00Z")
-    await producer.send_heartbeat(hb)
-    producer._producer.send_and_wait.assert_called_once()
-    call_args = producer._producer.send_and_wait.call_args
-    assert call_args[0][0] == "heartbeat"
-    assert b"agent-001" in call_args[1]["value"]
 
 
 @pytest.mark.asyncio
