@@ -2,6 +2,7 @@ package com.bara.api.adapter.`in`.rest
 
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
+import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*
 class AgentController(
     private val registerAgentUseCase: RegisterAgentUseCase,
     private val deleteAgentUseCase: DeleteAgentUseCase,
+    private val registryAgentUseCase: RegistryAgentUseCase,
     private val listAgentsQuery: ListAgentsQuery,
     private val getAgentQuery: GetAgentQuery,
     private val getAgentCardQuery: GetAgentCardQuery,
@@ -44,6 +46,15 @@ class AgentController(
     fun getAgentCard(@PathVariable id: String): ResponseEntity<Any> {
         val card = getAgentCardQuery.getCardById(id)
         return ResponseEntity.ok(card)
+    }
+
+    @PostMapping("/{agentName}/registry")
+    fun registry(
+        @RequestHeader("X-Provider-Id") providerId: String,
+        @PathVariable agentName: String,
+    ): ResponseEntity<Void> {
+        registryAgentUseCase.registry(providerId, agentName)
+        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}")

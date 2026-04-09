@@ -3,6 +3,7 @@ package com.bara.api.adapter.`in`.rest
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentCommand
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
+import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
@@ -47,6 +48,9 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var deleteAgentUseCase: DeleteAgentUseCase
+
+    @MockkBean
+    lateinit var registryAgentUseCase: RegistryAgentUseCase
 
     @MockkBean
     lateinit var listAgentsQuery: ListAgentsQuery
