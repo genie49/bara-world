@@ -48,6 +48,18 @@
 | outcome | `agent_not_found` | Agent 미존재 |
 | outcome | `agent_ownership_denied` | 소유권 불일치 |
 
+## POST /agents/{agentName}/heartbeat (Heartbeat)
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| agent_id | UUID | Agent ID |
+| agent_name | 문자열 | Agent 이름 |
+| provider_id | UUID | Provider ID |
+| outcome | `heartbeat_refreshed` | 성공 (TTL 갱신) |
+| outcome | `agent_not_found` | Agent 미존재 |
+| outcome | `agent_ownership_denied` | 소유권 불일치 |
+| outcome | `agent_not_registered` | Registry 미등록 |
+
 ## POST /agents/{agentName}/message:send (메시지 발행)
 
 | 필드 | 값 | 설명 |

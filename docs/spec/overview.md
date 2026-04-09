@@ -71,7 +71,7 @@ graph TD
 - AWS, GCP, Railway 등 어디에든 위치 가능
 - Kafka 자격증명만 보유하면 연동 가능 (등록 시 Provider가 REST API로 등록 후 자격증명 수령)
 - Docker 컨테이너로 실행, K3s 불필요
-- HTTP 노출 불필요 — 모든 통신(태스크, heartbeat)은 Kafka를 통해 처리
+- Agent 서버는 HTTP를 노출하지 않음 — 등록/heartbeat는 API Service에 HTTP 요청, 태스크/결과 통신은 Kafka를 통해 처리
 - Agent Card는 등록 시 Provider가 제출, API Service가 대신 제공
 
 ### Cloudflare
