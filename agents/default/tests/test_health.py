@@ -8,13 +8,17 @@ from app.main import create_app
 
 @pytest.fixture
 def app():
-    with patch("app.main.ChatAgent"), \
-         patch("app.main.ResultProducer") as mock_prod_cls, \
-         patch("app.main.TaskConsumer") as mock_cons_cls, \
-         patch("app.main.HeartbeatLoop") as mock_hb_cls:
+    with (
+        patch("app.main.ChatAgent"),
+        patch("app.main.ResultProducer") as mock_prod_cls,
+        patch("app.main.TaskConsumer") as mock_cons_cls,
+        patch("app.main.RegistryClient") as mock_reg_cls,
+    ):
         mock_prod_cls.return_value = AsyncMock()
         mock_cons_cls.return_value = AsyncMock()
-        mock_hb_cls.return_value = AsyncMock()
+        mock_reg = AsyncMock()
+        mock_reg.heartbeat_loop = AsyncMock()
+        mock_reg_cls.return_value = mock_reg
         yield create_app()
 
 

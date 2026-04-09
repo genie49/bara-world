@@ -4,7 +4,7 @@ import logging
 
 from aiokafka import AIOKafkaProducer
 
-from app.models.messages import HeartbeatMessage, TaskResult
+from app.models.messages import TaskResult
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,3 @@ class ResultProducer:
     async def send_result(self, topic: str, result: TaskResult) -> None:
         value = result.model_dump_json(exclude_none=True).encode()
         await self._producer.send_and_wait(topic, value=value)
-
-    async def send_heartbeat(self, msg: HeartbeatMessage) -> None:
-        value = msg.model_dump_json().encode()
-        await self._producer.send_and_wait("heartbeat", value=value)
