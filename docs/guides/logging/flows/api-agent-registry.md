@@ -36,3 +36,25 @@
 | agent_id | UUID | 삭제 대상 Agent ID |
 | provider_id | UUID | 삭제 요청 Provider ID |
 | outcome | `agent_deleted` / `agent_not_found` | 성공/실패 |
+
+## POST /agents/{agentName}/registry (Agent 레지스트리 등록)
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| agent_id | UUID | 등록된 Agent ID |
+| agent_name | 문자열 | Agent 이름 |
+| provider_id | UUID | Provider ID |
+| outcome | `agent_registry` | 성공 시 |
+| outcome | `agent_not_found` | Agent 미존재 |
+| outcome | `agent_ownership_denied` | 소유권 불일치 |
+
+## POST /agents/{agentName}/message:send (메시지 발행)
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| task_id | UUID | 생성된 Task ID |
+| agent_name | 문자열 | 대상 Agent 이름 |
+| agent_id | UUID | 대상 Agent ID |
+| user_id | UUID | 요청 사용자 ID |
+| outcome | `task_published` | 성공 시 |
+| outcome | `agent_unavailable` | Agent 비활성 |
