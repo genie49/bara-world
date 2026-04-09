@@ -4,6 +4,9 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/bara
+    redis:
+      host: redis.data.svc.cluster.local
+      port: 6379
 
 server:
   port: 8082
