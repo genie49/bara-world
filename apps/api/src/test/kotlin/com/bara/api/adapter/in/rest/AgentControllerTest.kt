@@ -11,6 +11,8 @@ import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
+import com.bara.api.domain.exception.AgentOwnershipException
+import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -186,6 +188,67 @@ class AgentControllerTest {
         }.andExpect {
             status { isNotFound() }
             jsonPath("$.error") { value("agent_not_found") }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 성공 시 200`() {
+        justRun { registryAgentUseCase.registry("p-1", "my-agent") }
+
+        mockMvc.post("/agents/my-agent/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isOk() }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 미존재 Agent 시 404`() {
+        every { registryAgentUseCase.registry("p-1", "unknown") } throws AgentNotFoundException()
+
+        mockMvc.post("/agents/unknown/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 소유권 불일치 시 403`() {
+        every { registryAgentUseCase.registry("p-1", "other-agent") } throws AgentOwnershipException()
+
+        mockMvc.post("/agents/other-agent/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST agents message send 성공 시 taskId 반환`() {
+        every { sendMessageUseCase.sendMessage(eq("user-1"), eq("my-agent"), any()) } returns "task-123"
+
+        mockMvc.post("/agents/my-agent/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.taskId") { value("task-123") }
+        }
+    }
+
+    @Test
+    fun `POST agents message send Agent 비활성 시 503`() {
+        every { sendMessageUseCase.sendMessage(any(), eq("dead"), any()) } throws AgentUnavailableException()
+
+        mockMvc.post("/agents/dead/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+        }.andExpect {
+            status { isServiceUnavailable() }
+            jsonPath("$.error") { value("agent_unavailable") }
         }
     }
 }

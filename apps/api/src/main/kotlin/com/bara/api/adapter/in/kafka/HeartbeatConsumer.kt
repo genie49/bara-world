@@ -2,6 +2,7 @@ package com.bara.api.adapter.`in`.kafka
 
 import com.bara.api.application.port.out.AgentRegistryPort
 import com.bara.api.application.port.out.AgentRepository
+import com.bara.common.logging.WideEvent
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.slf4j.LoggerFactory
@@ -42,5 +43,9 @@ class HeartbeatConsumer(
         }
 
         agentRegistryPort.refreshTtl(agent.name)
+        WideEvent.put("agent_id", heartbeat.agent_id)
+        WideEvent.put("agent_name", agent.name)
+        WideEvent.put("outcome", "heartbeat_refreshed")
+        WideEvent.message("Heartbeat TTL 갱신")
     }
 }
