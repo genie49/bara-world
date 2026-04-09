@@ -1,6 +1,7 @@
 package com.bara.api.adapter.`in`.rest
 
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
+import com.bara.api.application.port.`in`.command.HeartbeatAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentCommand
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
@@ -11,6 +12,7 @@ import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
+import com.bara.api.domain.exception.AgentNotRegisteredException
 import com.bara.api.domain.exception.AgentOwnershipException
 import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.model.Agent
@@ -56,6 +58,9 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var registryAgentUseCase: RegistryAgentUseCase
+
+    @MockkBean
+    lateinit var heartbeatAgentUseCase: HeartbeatAgentUseCase
 
     @MockkBean
     lateinit var listAgentsQuery: ListAgentsQuery
@@ -249,6 +254,40 @@ class AgentControllerTest {
         }.andExpect {
             status { isServiceUnavailable() }
             jsonPath("$.error") { value("agent_unavailable") }
+        }
+    }
+
+    @Test
+    fun `POST agents heartbeat 성공 시 200`() {
+        justRun { heartbeatAgentUseCase.heartbeat("p-1", "my-agent") }
+
+        mockMvc.post("/agents/my-agent/heartbeat") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isOk() }
+        }
+    }
+
+    @Test
+    fun `POST agents heartbeat 미등록 Agent 시 404`() {
+        every { heartbeatAgentUseCase.heartbeat("p-1", "unknown") } throws AgentNotRegisteredException("unknown")
+
+        mockMvc.post("/agents/unknown/heartbeat") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isNotFound() }
+            jsonPath("$.error") { value("agent_not_registered") }
+        }
+    }
+
+    @Test
+    fun `POST agents heartbeat 소유권 불일치 시 403`() {
+        every { heartbeatAgentUseCase.heartbeat("p-1", "other-agent") } throws AgentOwnershipException()
+
+        mockMvc.post("/agents/other-agent/heartbeat") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isForbidden() }
         }
     }
 }

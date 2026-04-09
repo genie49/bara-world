@@ -1,6 +1,7 @@
 package com.bara.api.adapter.`in`.rest
 
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
+import com.bara.api.domain.exception.AgentNotRegisteredException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentOwnershipException
 import com.bara.api.domain.exception.AgentUnavailableException
@@ -38,6 +39,15 @@ class ApiExceptionHandler {
         WideEvent.message("Agent 소유권 불일치")
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(ErrorResponse("agent_ownership_denied", ex.message ?: "Agent does not belong to this provider"))
+    }
+
+    @ExceptionHandler(AgentNotRegisteredException::class)
+    fun handleAgentNotRegistered(ex: AgentNotRegisteredException): ResponseEntity<ErrorResponse> {
+        WideEvent.put("error_type", "AgentNotRegisteredException")
+        WideEvent.put("outcome", "agent_not_registered")
+        WideEvent.message("Agent 미등록 상태")
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse("agent_not_registered", ex.message ?: "Agent is not registered"))
     }
 
     @ExceptionHandler(AgentUnavailableException::class)

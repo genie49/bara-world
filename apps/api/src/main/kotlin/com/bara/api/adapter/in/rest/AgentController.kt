@@ -1,6 +1,7 @@
 package com.bara.api.adapter.`in`.rest
 
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
+import com.bara.api.application.port.`in`.command.HeartbeatAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
@@ -17,6 +18,7 @@ class AgentController(
     private val registerAgentUseCase: RegisterAgentUseCase,
     private val deleteAgentUseCase: DeleteAgentUseCase,
     private val registryAgentUseCase: RegistryAgentUseCase,
+    private val heartbeatAgentUseCase: HeartbeatAgentUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val listAgentsQuery: ListAgentsQuery,
     private val getAgentQuery: GetAgentQuery,
@@ -56,6 +58,15 @@ class AgentController(
         @PathVariable agentName: String,
     ): ResponseEntity<Void> {
         registryAgentUseCase.registry(providerId, agentName)
+        return ResponseEntity.ok().build()
+    }
+
+    @PostMapping("/{agentName}/heartbeat")
+    fun heartbeat(
+        @RequestHeader("X-Provider-Id") providerId: String,
+        @PathVariable agentName: String,
+    ): ResponseEntity<Void> {
+        heartbeatAgentUseCase.heartbeat(providerId, agentName)
         return ResponseEntity.ok().build()
     }
 
