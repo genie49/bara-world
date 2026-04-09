@@ -2,6 +2,7 @@ package com.bara.api
 
 import com.bara.api.application.port.out.AgentRegistryPort
 import com.bara.api.application.port.out.AgentRepository
+import com.bara.api.application.port.out.TaskPublisherPort
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
@@ -26,6 +27,9 @@ class BaraApiApplicationTest {
 
     @MockkBean
     lateinit var agentRegistryPort: AgentRegistryPort
+
+    @MockkBean
+    lateinit var taskPublisherPort: TaskPublisherPort
 
     @Test
     fun contextLoads() {

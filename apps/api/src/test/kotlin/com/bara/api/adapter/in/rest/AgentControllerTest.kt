@@ -4,9 +4,11 @@ import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentCommand
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
+import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
+import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.model.Agent
@@ -61,6 +63,12 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var getAgentCardQuery: GetAgentCardQuery
+
+    @MockkBean
+    lateinit var sendMessageUseCase: SendMessageUseCase
+
+    @MockkBean
+    lateinit var taskPublisherPort: TaskPublisherPort
 
     private val agentCard = AgentCard(
         name = "Test Agent",

@@ -67,3 +67,23 @@ data class AgentDetailResponse(
 data class AgentListResponse(val agents: List<AgentResponse>)
 
 data class ErrorResponse(val error: String, val message: String)
+
+// ── A2A Message ──
+
+data class SendMessageApiRequest(
+    val message: MessageRequest,
+    val contextId: String? = null,
+)
+
+data class MessageRequest(
+    val messageId: String,
+    val parts: List<PartRequest>,
+)
+
+data class PartRequest(
+    val text: String,
+)
+
+data class SendMessageApiResponse(
+    val taskId: String,
+)
