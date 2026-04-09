@@ -42,14 +42,15 @@ sequenceDiagram
         API->>R: agent:registry:{agentName} TTL 갱신
     end
 
-    Note over API,K: 4. A2A 통신
-    P->>API: POST /agents/{agentName}/message:send
+    Note over API,K: 4. A2A 통신 (User → Agent)
+    participant U as User
+    U->>API: POST /agents/{agentName}/message:send (User JWT 인증)
     API->>R: agent:registry:{agentName} 확인
     API->>K: tasks.{agentId} 발행
     K-->>A: 태스크 수신 + 처리
     A->>K: results.api 발행
     K-->>API: 결과 수신
-    API-->>P: 응답 반환
+    API-->>U: 응답 반환
 ```
 
 ## Agent name 글로벌 unique
