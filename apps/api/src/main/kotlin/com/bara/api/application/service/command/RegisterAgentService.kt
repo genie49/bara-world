@@ -14,7 +14,7 @@ class RegisterAgentService(
 ) : RegisterAgentUseCase {
 
     override fun register(providerId: String, command: RegisterAgentCommand): Agent {
-        agentRepository.findByProviderIdAndName(providerId, command.name)?.let {
+        agentRepository.findByName(command.name)?.let {
             throw AgentNameAlreadyExistsException()
         }
 

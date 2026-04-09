@@ -18,10 +18,9 @@ class GetAgentCardServiceTest {
     @Test
     fun `존재하는 Agent의 AgentCard를 반환한다`() {
         val card = AgentCard(
-            name = "Test Agent", description = "d", version = "1.0.0",
-            defaultInputModes = listOf("text/plain"), defaultOutputModes = listOf("text/plain"),
-            capabilities = AgentCard.AgentCapabilities(streaming = true),
-            skills = listOf(AgentCard.AgentSkill(id = "s1", name = "Skill", description = "desc")),
+            name = "Test Agent",
+            description = "A test agent",
+            version = "1.0.0",
         )
         val agent = Agent.create(name = "My Agent", providerId = "p-1", agentCard = card)
         every { agentRepository.findById(agent.id) } returns agent
@@ -29,8 +28,6 @@ class GetAgentCardServiceTest {
         val result = service.getCardById(agent.id)
 
         assertEquals("Test Agent", result.name)
-        assertEquals(true, result.capabilities.streaming)
-        assertEquals(1, result.skills.size)
     }
 
     @Test

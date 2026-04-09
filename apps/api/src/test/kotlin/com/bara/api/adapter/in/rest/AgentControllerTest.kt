@@ -59,10 +59,6 @@ class AgentControllerTest {
         name = "Test Agent",
         description = "A test agent",
         version = "1.0.0",
-        defaultInputModes = listOf("text/plain"),
-        defaultOutputModes = listOf("text/plain"),
-        capabilities = AgentCard.AgentCapabilities(),
-        skills = listOf(AgentCard.AgentSkill(id = "s1", name = "Skill 1", description = "A skill")),
     )
 
     private val now = Instant.parse("2026-01-01T00:00:00Z")
@@ -85,11 +81,7 @@ class AgentControllerTest {
                     "agentCard": {
                         "name": "Test Agent",
                         "description": "A test agent",
-                        "version": "1.0.0",
-                        "defaultInputModes": ["text/plain"],
-                        "defaultOutputModes": ["text/plain"],
-                        "capabilities": {"streaming": false, "pushNotifications": false},
-                        "skills": [{"id": "s1", "name": "Skill 1", "description": "A skill"}]
+                        "version": "1.0.0"
                     }
                 }
             """.trimIndent()
@@ -109,7 +101,7 @@ class AgentControllerTest {
         mockMvc.post("/agents") {
             header("X-Provider-Id", "p-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"name":"dup","agentCard":{"name":"A","description":"d","version":"1","defaultInputModes":["text/plain"],"defaultOutputModes":["text/plain"],"capabilities":{},"skills":[]}}"""
+            content = """{"name":"dup","agentCard":{"name":"A","description":"d","version":"1"}}"""
         }.andExpect {
             status { isConflict() }
             jsonPath("$.error") { value("agent_name_already_exists") }
@@ -156,7 +148,6 @@ class AgentControllerTest {
         mockMvc.get("/agents/a-1/.well-known/agent.json").andExpect {
             status { isOk() }
             jsonPath("$.name") { value("Test Agent") }
-            jsonPath("$.skills.length()") { value(1) }
         }
     }
 
