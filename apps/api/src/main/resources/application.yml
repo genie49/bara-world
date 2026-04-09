@@ -7,6 +7,16 @@ spring:
     redis:
       host: redis.data.svc.cluster.local
       port: 6379
+  kafka:
+    bootstrap-servers: kafka-0.kafka.data.svc.cluster.local:9092
+    consumer:
+      group-id: api-service
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 server:
   port: 8082
