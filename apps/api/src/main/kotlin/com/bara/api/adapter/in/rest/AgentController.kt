@@ -2,6 +2,8 @@ package com.bara.api.adapter.`in`.rest
 
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
+import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
+import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.*
 class AgentController(
     private val registerAgentUseCase: RegisterAgentUseCase,
     private val deleteAgentUseCase: DeleteAgentUseCase,
+    private val registryAgentUseCase: RegistryAgentUseCase,
+    private val sendMessageUseCase: SendMessageUseCase,
     private val listAgentsQuery: ListAgentsQuery,
     private val getAgentQuery: GetAgentQuery,
     private val getAgentCardQuery: GetAgentCardQuery,
@@ -46,6 +50,15 @@ class AgentController(
         return ResponseEntity.ok(card)
     }
 
+    @PostMapping("/{agentName}/registry")
+    fun registry(
+        @RequestHeader("X-Provider-Id") providerId: String,
+        @PathVariable agentName: String,
+    ): ResponseEntity<Void> {
+        registryAgentUseCase.registry(providerId, agentName)
+        return ResponseEntity.ok().build()
+    }
+
     @DeleteMapping("/{id}")
     fun delete(
         @RequestHeader("X-Provider-Id") providerId: String,
@@ -53,5 +66,21 @@ class AgentController(
     ): ResponseEntity<Void> {
         deleteAgentUseCase.delete(providerId, id)
         return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/{agentName}/message:send")
+    fun sendMessage(
+        @RequestHeader("X-User-Id") userId: String,
+        @PathVariable agentName: String,
+        @RequestBody request: SendMessageApiRequest,
+    ): ResponseEntity<SendMessageApiResponse> {
+        val text = request.message.parts.firstOrNull()?.text ?: ""
+        val sendRequest = SendMessageUseCase.SendMessageRequest(
+            messageId = request.message.messageId,
+            text = text,
+            contextId = request.contextId,
+        )
+        val taskId = sendMessageUseCase.sendMessage(userId, agentName, sendRequest)
+        return ResponseEntity.ok(SendMessageApiResponse(taskId = taskId))
     }
 }

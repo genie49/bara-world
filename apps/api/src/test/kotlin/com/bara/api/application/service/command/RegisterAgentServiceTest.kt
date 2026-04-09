@@ -21,18 +21,12 @@ class RegisterAgentServiceTest {
         name = "Test Agent",
         description = "A test agent",
         version = "1.0.0",
-        defaultInputModes = listOf("text/plain"),
-        defaultOutputModes = listOf("text/plain"),
-        capabilities = AgentCard.AgentCapabilities(),
-        skills = listOf(
-            AgentCard.AgentSkill(id = "s1", name = "Skill 1", description = "A skill")
-        ),
     )
 
     @Test
     fun `신규 Agent를 등록하면 저장된다`() {
         val command = RegisterAgentCommand(name = "My Agent", agentCard = agentCard)
-        every { agentRepository.findByProviderIdAndName("p-1", "My Agent") } returns null
+        every { agentRepository.findByName("My Agent") } returns null
         every { agentRepository.save(any()) } answers { firstArg() }
 
         val result = service.register("p-1", command)
@@ -44,10 +38,10 @@ class RegisterAgentServiceTest {
     }
 
     @Test
-    fun `동일 Provider에 같은 이름의 Agent가 있으면 예외 발생`() {
+    fun `같은 이름의 Agent가 있으면 예외 발생`() {
         val existing = Agent.create(name = "My Agent", providerId = "p-1", agentCard = agentCard)
         val command = RegisterAgentCommand(name = "My Agent", agentCard = agentCard)
-        every { agentRepository.findByProviderIdAndName("p-1", "My Agent") } returns existing
+        every { agentRepository.findByName("My Agent") } returns existing
 
         assertThrows<AgentNameAlreadyExistsException> {
             service.register("p-1", command)

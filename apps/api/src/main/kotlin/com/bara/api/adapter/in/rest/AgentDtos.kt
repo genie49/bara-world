@@ -20,44 +20,13 @@ data class AgentCardRequest(
     val name: String,
     val description: String,
     val version: String,
-    val defaultInputModes: List<String>,
-    val defaultOutputModes: List<String>,
-    val capabilities: AgentCapabilitiesRequest = AgentCapabilitiesRequest(),
-    val skills: List<AgentSkillRequest>,
-    val iconUrl: String? = null,
 ) {
     fun toDomain(): AgentCard = AgentCard(
         name = name,
         description = description,
         version = version,
-        defaultInputModes = defaultInputModes,
-        defaultOutputModes = defaultOutputModes,
-        capabilities = AgentCard.AgentCapabilities(
-            streaming = capabilities.streaming,
-            pushNotifications = capabilities.pushNotifications,
-        ),
-        skills = skills.map {
-            AgentCard.AgentSkill(
-                id = it.id, name = it.name, description = it.description,
-                tags = it.tags, examples = it.examples,
-            )
-        },
-        iconUrl = iconUrl,
     )
 }
-
-data class AgentCapabilitiesRequest(
-    val streaming: Boolean = false,
-    val pushNotifications: Boolean = false,
-)
-
-data class AgentSkillRequest(
-    val id: String,
-    val name: String,
-    val description: String,
-    val tags: List<String> = emptyList(),
-    val examples: List<String> = emptyList(),
-)
 
 // ── Response ──
 
@@ -98,3 +67,23 @@ data class AgentDetailResponse(
 data class AgentListResponse(val agents: List<AgentResponse>)
 
 data class ErrorResponse(val error: String, val message: String)
+
+// ── A2A Message ──
+
+data class SendMessageApiRequest(
+    val message: MessageRequest,
+    val contextId: String? = null,
+)
+
+data class MessageRequest(
+    val messageId: String,
+    val parts: List<PartRequest>,
+)
+
+data class PartRequest(
+    val text: String,
+)
+
+data class SendMessageApiResponse(
+    val taskId: String,
+)

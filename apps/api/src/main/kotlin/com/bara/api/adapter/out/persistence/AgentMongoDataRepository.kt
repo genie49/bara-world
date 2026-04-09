@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface AgentMongoDataRepository : MongoRepository<AgentDocument, String> {
-    fun findByProviderIdAndName(providerId: String, name: String): AgentDocument?
+    fun findByName(name: String): AgentDocument?
 }

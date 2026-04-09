@@ -15,11 +15,11 @@ class AgentMongoRepository(
     override fun findById(id: String): Agent? =
         dataRepository.findById(id).orElse(null)?.toDomain()
 
+    override fun findByName(name: String): Agent? =
+        dataRepository.findByName(name)?.toDomain()
+
     override fun findAll(): List<Agent> =
         dataRepository.findAll().map { it.toDomain() }
-
-    override fun findByProviderIdAndName(providerId: String, name: String): Agent? =
-        dataRepository.findByProviderIdAndName(providerId, name)?.toDomain()
 
     override fun deleteById(id: String) =
         dataRepository.deleteById(id)

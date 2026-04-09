@@ -3,11 +3,16 @@ package com.bara.api.adapter.`in`.rest
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentCommand
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
+import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
+import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
+import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
+import com.bara.api.domain.exception.AgentOwnershipException
+import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -32,7 +37,10 @@ import java.time.Instant
         "spring.autoconfigure.exclude=" +
             "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration," +
             "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration," +
-            "org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration",
+            "org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration," +
+            "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
+            "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration," +
+            "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
     ]
 )
 class AgentControllerTest {
@@ -47,6 +55,9 @@ class AgentControllerTest {
     lateinit var deleteAgentUseCase: DeleteAgentUseCase
 
     @MockkBean
+    lateinit var registryAgentUseCase: RegistryAgentUseCase
+
+    @MockkBean
     lateinit var listAgentsQuery: ListAgentsQuery
 
     @MockkBean
@@ -55,14 +66,16 @@ class AgentControllerTest {
     @MockkBean
     lateinit var getAgentCardQuery: GetAgentCardQuery
 
+    @MockkBean
+    lateinit var sendMessageUseCase: SendMessageUseCase
+
+    @MockkBean
+    lateinit var taskPublisherPort: TaskPublisherPort
+
     private val agentCard = AgentCard(
         name = "Test Agent",
         description = "A test agent",
         version = "1.0.0",
-        defaultInputModes = listOf("text/plain"),
-        defaultOutputModes = listOf("text/plain"),
-        capabilities = AgentCard.AgentCapabilities(),
-        skills = listOf(AgentCard.AgentSkill(id = "s1", name = "Skill 1", description = "A skill")),
     )
 
     private val now = Instant.parse("2026-01-01T00:00:00Z")
@@ -85,11 +98,7 @@ class AgentControllerTest {
                     "agentCard": {
                         "name": "Test Agent",
                         "description": "A test agent",
-                        "version": "1.0.0",
-                        "defaultInputModes": ["text/plain"],
-                        "defaultOutputModes": ["text/plain"],
-                        "capabilities": {"streaming": false, "pushNotifications": false},
-                        "skills": [{"id": "s1", "name": "Skill 1", "description": "A skill"}]
+                        "version": "1.0.0"
                     }
                 }
             """.trimIndent()
@@ -109,7 +118,7 @@ class AgentControllerTest {
         mockMvc.post("/agents") {
             header("X-Provider-Id", "p-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"name":"dup","agentCard":{"name":"A","description":"d","version":"1","defaultInputModes":["text/plain"],"defaultOutputModes":["text/plain"],"capabilities":{},"skills":[]}}"""
+            content = """{"name":"dup","agentCard":{"name":"A","description":"d","version":"1"}}"""
         }.andExpect {
             status { isConflict() }
             jsonPath("$.error") { value("agent_name_already_exists") }
@@ -156,7 +165,6 @@ class AgentControllerTest {
         mockMvc.get("/agents/a-1/.well-known/agent.json").andExpect {
             status { isOk() }
             jsonPath("$.name") { value("Test Agent") }
-            jsonPath("$.skills.length()") { value(1) }
         }
     }
 
@@ -180,6 +188,67 @@ class AgentControllerTest {
         }.andExpect {
             status { isNotFound() }
             jsonPath("$.error") { value("agent_not_found") }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 성공 시 200`() {
+        justRun { registryAgentUseCase.registry("p-1", "my-agent") }
+
+        mockMvc.post("/agents/my-agent/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isOk() }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 미존재 Agent 시 404`() {
+        every { registryAgentUseCase.registry("p-1", "unknown") } throws AgentNotFoundException()
+
+        mockMvc.post("/agents/unknown/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `POST agents registry 소유권 불일치 시 403`() {
+        every { registryAgentUseCase.registry("p-1", "other-agent") } throws AgentOwnershipException()
+
+        mockMvc.post("/agents/other-agent/registry") {
+            header("X-Provider-Id", "p-1")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST agents message send 성공 시 taskId 반환`() {
+        every { sendMessageUseCase.sendMessage(eq("user-1"), eq("my-agent"), any()) } returns "task-123"
+
+        mockMvc.post("/agents/my-agent/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.taskId") { value("task-123") }
+        }
+    }
+
+    @Test
+    fun `POST agents message send Agent 비활성 시 503`() {
+        every { sendMessageUseCase.sendMessage(any(), eq("dead"), any()) } throws AgentUnavailableException()
+
+        mockMvc.post("/agents/dead/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+        }.andExpect {
+            status { isServiceUnavailable() }
+            jsonPath("$.error") { value("agent_unavailable") }
         }
     }
 }

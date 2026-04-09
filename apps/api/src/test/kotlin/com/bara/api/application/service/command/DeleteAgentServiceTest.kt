@@ -20,12 +20,6 @@ class DeleteAgentServiceTest {
         name = "Test Agent",
         description = "A test agent",
         version = "1.0.0",
-        defaultInputModes = listOf("text/plain"),
-        defaultOutputModes = listOf("text/plain"),
-        capabilities = AgentCard.AgentCapabilities(),
-        skills = listOf(
-            AgentCard.AgentSkill(id = "s1", name = "Skill 1", description = "A skill")
-        ),
     )
 
     @Test

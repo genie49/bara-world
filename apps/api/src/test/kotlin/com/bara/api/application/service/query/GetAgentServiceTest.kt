@@ -18,9 +18,9 @@ class GetAgentServiceTest {
     @Test
     fun `존재하는 Agent를 조회하면 반환한다`() {
         val card = AgentCard(
-            name = "A", description = "d", version = "1.0.0",
-            defaultInputModes = listOf("text/plain"), defaultOutputModes = listOf("text/plain"),
-            capabilities = AgentCard.AgentCapabilities(), skills = emptyList(),
+            name = "A",
+            description = "d",
+            version = "1.0.0",
         )
         val agent = Agent.create(name = "My Agent", providerId = "p-1", agentCard = card)
         every { agentRepository.findById(agent.id) } returns agent
