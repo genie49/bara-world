@@ -2,7 +2,7 @@
 
 ## API Service 역할
 
-API Service는 에이전트의 등록, 조회, 발견을 담당하는 중앙 서비스이며, 외부 사용자에게 A2A 프로토콜 호환 HTTP 인터페이스를 제공하는 **A2A 게이트웨이** 역할을 한다. Agent 서버는 HTTP를 노출하지 않으며, 모든 Agent 통신은 Kafka를 통해 이루어진다.
+API Service는 에이전트의 등록, 조회, 발견을 담당하는 중앙 서비스이며, 외부 사용자에게 A2A 프로토콜 호환 HTTP 인터페이스를 제공하는 **A2A 게이트웨이** 역할을 한다. Agent 등록 및 heartbeat는 HTTP로 처리되며, 태스크/결과 통신은 Kafka를 통해 이루어진다.
 
 ### 핵심 기능
 
@@ -14,16 +14,16 @@ API Service는 에이전트의 등록, 조회, 발견을 담당하는 중앙 서
 
 ### 엔드포인트
 
-| 메서드 | 엔드포인트                                      | 용도                                        |
-| ------ | ----------------------------------------------- | ------------------------------------------- |
-| GET    | `/agents`                                       | 활성 Agent 전체 목록                        |
-| GET    | `/agents/{id}`                                  | 특정 Agent 정보                             |
-| GET    | `/agents/{id}/.well-known/agent.json`           | Agent Card 조회 (MongoDB)                   |
-| POST   | `/agents`                                       | Agent 등록 (Provider 인증 필요)             |
-| DELETE | `/agents/{id}`                                  | Agent 삭제 (Provider 인증 필요)             |
-| POST   | `/agents/{id}/credentials/rotate`               | Kafka 계정 재발급                           |
-| POST   | `/agents/{agentName}/registry`                  | Agent 생존 등록 (Provider API Key)          |
-| POST   | `/agents/{agentName}/message:send`              | 메시지 전송 (User JWT → Kafka)              |
+| 메서드 | 엔드포인트                            | 용도                               |
+| ------ | ------------------------------------- | ---------------------------------- |
+| GET    | `/agents`                             | 활성 Agent 전체 목록               |
+| GET    | `/agents/{id}`                        | 특정 Agent 정보                    |
+| GET    | `/agents/{id}/.well-known/agent.json` | Agent Card 조회 (MongoDB)          |
+| POST   | `/agents`                             | Agent 등록 (Provider 인증 필요)    |
+| DELETE | `/agents/{id}`                        | Agent 삭제 (Provider 인증 필요)    |
+| POST   | `/agents/{id}/credentials/rotate`     | Kafka 계정 재발급                  |
+| POST   | `/agents/{agentName}/registry`        | Agent 생존 등록 (Provider API Key) |
+| POST   | `/agents/{agentName}/message:send`    | 메시지 전송 (User JWT → Kafka)     |
 
 ## 태스크 처리
 
@@ -94,45 +94,50 @@ Redis는 Agent의 **활성 여부만** 관리한다. Agent 메타데이터는 Mo
 
 ### Heartbeat
 
-| 항목        | 값                    |
-| ----------- | --------------------- |
-| TTL         | 60초                  |
-| 갱신 주기   | 20초                  |
-| 정상 종료   | 즉시 `DEL`            |
-| 비정상 종료 | TTL 만료 시 자동 제거 |
+Agent가 HTTP `POST /agents/{agentName}/heartbeat`를 20초 간격으로 호출하여 생존을 알린다.
 
-Agent 서버는 Kafka `heartbeat` 토픽에 주기적으로 메시지를 발행한다. API Service의 HeartbeatConsumer가 이를 구독하여 Redis TTL을 갱신한다. Agent가 죽으면 Kafka 발행이 멈추고, 60초 후 TTL 만료로 비활성 처리된다.
+처리:
 
-> Heartbeat 토픽 상세는 [메시징 문서](../shared/messaging.md#토픽-설계) 참고.
+1. Traefik forwardAuth가 `X-Provider-Id` 주입
+2. Redis `agent:registry:{agentName}` 존재 확인 → 없으면 404
+3. MongoDB에서 Agent 조회 → 소유권 검증 → 불일치 시 403
+4. Redis TTL 60초로 갱신
+
+에러:
+
+- 인증 실패 → 401
+- Agent 미등록 → 404
+- 소유권 불일치 → 403
 
 ### Agent Registry (생존 등록)
 
 Agent가 기동 시 API Service에 생존을 알린다.
 
-| 항목 | 값 |
-|------|-----|
-| 엔드포인트 | `POST /agents/{agentName}/registry` |
-| 인증 | API Key (Provider 소유 확인) |
-| 저장소 | Redis `agent:registry:{agentName}` = agentId, TTL 60초 |
-| 멱등성 | 동일 요청 반복 시 TTL 갱신 |
+| 항목       | 값                                                     |
+| ---------- | ------------------------------------------------------ |
+| 엔드포인트 | `POST /agents/{agentName}/registry`                    |
+| 인증       | API Key (Provider 소유 확인)                           |
+| 저장소     | Redis `agent:registry:{agentName}` = agentId, TTL 60초 |
+| 멱등성     | 동일 요청 반복 시 TTL 갱신                             |
 
 흐름:
+
 1. Provider가 `POST /agents`로 Agent를 MongoDB에 등록 (1회)
 2. Agent 기동 시 `POST /agents/{agentName}/registry`로 Redis에 생존 등록
-3. Heartbeat(Kafka `heartbeat` 토픽)가 20초마다 Redis TTL 갱신
+3. Heartbeat(HTTP `POST /agents/{agentName}/heartbeat`)가 20초마다 Redis TTL 갱신
 4. Agent 종료 → heartbeat 멈춤 → 60초 후 TTL 만료 → 비활성
 
 ### A2A 메시지 전송
 
 사용자가 Agent에 메시지를 보낸다.
 
-| 항목 | 값 |
-|------|-----|
-| 엔드포인트 | `POST /agents/{agentName}/message:send` |
-| 인증 | User JWT |
-| 동작 | Redis에서 Agent 활성 확인 → Kafka `tasks.{agentId}` 발행 |
-| 응답 | `{"taskId": "..."}` |
-| Agent 비활성 시 | 503 AgentUnavailableError |
+| 항목            | 값                                                       |
+| --------------- | -------------------------------------------------------- |
+| 엔드포인트      | `POST /agents/{agentName}/message:send`                  |
+| 인증            | User JWT                                                 |
+| 동작            | Redis에서 Agent 활성 확인 → Kafka `tasks.{agentId}` 발행 |
+| 응답            | `{"taskId": "..."}`                                      |
+| Agent 비활성 시 | 503 AgentUnavailableError                                |
 
 ## Agent Card (A2A 스펙)
 
@@ -140,11 +145,11 @@ Agent Card는 등록 시 Provider가 제출하며, MongoDB에 저장된다. Agen
 
 ### 포함 정보
 
-| 필드        | 타입   | 설명          |
-| ----------- | ------ | ------------- |
+| 필드        | 타입   | 설명            |
+| ----------- | ------ | --------------- |
 | name        | String | Agent 표시 이름 |
-| description | String | Agent 설명    |
-| version     | String | 버전          |
+| description | String | Agent 설명      |
+| version     | String | 버전            |
 
 ### 외부 접근 URL
 
@@ -189,8 +194,7 @@ sequenceDiagram
 
     loop 20초마다
         participant A as Agent 서버
-        A->>K: heartbeat 토픽 발행
-        K-->>R: heartbeat 수신
+        A->>R: POST /agents/{agentName}/heartbeat
         R->>R: Redis TTL 갱신
     end
 ```

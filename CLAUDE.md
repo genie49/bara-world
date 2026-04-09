@@ -127,12 +127,12 @@ Auth 백엔드 테스트는 MongoDB/Redis 없이 동작 (자동 구성 exclude +
 핵심 구성:
 
 - **Auth Service** — Google OAuth → Access/Refresh Token 발급, Provider API Key 관리, Kafka OAUTHBEARER 토큰, Traefik forwardAuth (`GET /api/auth/validate`)
-- **API Service** — Agent 등록/조회/삭제 (MongoDB CRUD ✓), Agent Card 간소화(name/description/version) ✓, Redis 레지스트리(`agent:registry:{agentName}`) ✓, HeartbeatConsumer(TTL 갱신) ✓, `POST /agents/{agentName}/registry` ✓, `POST /agents/{agentName}/message:send`(User JWT → Kafka) ✓, 태스크 처리(동기+SSE) ○
+- **API Service** — Agent 등록/조회/삭제 (MongoDB CRUD ✓), Agent Card 간소화(name/description/version) ✓, Redis 레지스트리(`agent:registry:{agentName}`) ✓, HeartbeatAgentService(HTTP heartbeat TTL 갱신) ✓, `POST /agents/{agentName}/registry` ✓, `POST /agents/{agentName}/message:send`(User JWT → Kafka) ✓, 태스크 처리(동기+SSE) ○
 - **Scheduler Service** — cron 기반 반복 태스크 발행, 결과 전달
 - **SDK** — Python, TypeScript, Java 공용 SDK (Kafka 통신, 인증, 메시지 포맷팅)
 - **Clients** — Web FE, Telegram
 
-모든 Agent 통신은 Kafka를 통해 비동기로 처리. Redis로 Agent 상태 관리(heartbeat) 및 SSE 버퍼링.
+Agent 등록 및 heartbeat는 HTTP로 처리, 태스크/결과 통신은 Kafka를 통해 비동기로 처리. Redis로 Agent 상태 관리(heartbeat) 및 SSE 버퍼링.
 
 ## Documentation
 
