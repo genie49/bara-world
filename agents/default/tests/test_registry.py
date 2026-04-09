@@ -71,6 +71,33 @@ async def test_heartbeat_failure_does_not_raise(settings):
 
 
 @pytest.mark.asyncio
+async def test_heartbeat_404_triggers_reregister(settings):
+    call_count = {"heartbeat": 0, "registry": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "/heartbeat" in req.url.path:
+            call_count["heartbeat"] += 1
+            return httpx.Response(404)
+        if "/registry" in req.url.path:
+            call_count["registry"] += 1
+            return httpx.Response(200)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    client = RegistryClient(settings, transport=transport)
+    task = asyncio.create_task(client.heartbeat_loop())
+    await asyncio.sleep(0.35)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    await client.close()
+    assert call_count["heartbeat"] >= 2
+    assert call_count["registry"] >= 2
+
+
+@pytest.mark.asyncio
 async def test_close_cleans_up(settings):
     transport = httpx.MockTransport(lambda req: httpx.Response(200))
     client = RegistryClient(settings, transport=transport)

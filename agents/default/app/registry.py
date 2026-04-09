@@ -42,7 +42,15 @@ class RegistryClient:
                 response = await self._client.post(
                     f"/agents/{self._agent_name}/heartbeat"
                 )
-                if response.status_code != 200:
+                if response.status_code == 404:
+                    logger.warning(
+                        "Agent not registered, re-registering: %s", self._agent_name
+                    )
+                    try:
+                        await self.register()
+                    except RegistryError as e:
+                        logger.error("Re-registration failed: %s", e)
+                elif response.status_code != 200:
                     logger.warning("Heartbeat failed: status=%d", response.status_code)
             except httpx.HTTPError as e:
                 logger.warning("Heartbeat error: %s", e)
