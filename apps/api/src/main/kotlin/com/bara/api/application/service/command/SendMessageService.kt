@@ -122,6 +122,77 @@ class SendMessageService(
         }
     }
 
+    override fun sendAsync(
+        userId: String,
+        agentName: String,
+        request: SendMessageUseCase.SendMessageRequest,
+    ): A2ATaskDto {
+        val agentId = agentRegistryPort.getAgentId(agentName)
+            ?: throw AgentUnavailableException()
+
+        val now = Instant.now()
+        val taskId = UUID.randomUUID().toString()
+        val requestId = UUID.randomUUID().toString()
+        val contextId = request.contextId ?: UUID.randomUUID().toString()
+        val expiredAt = now.plus(Duration.ofDays(properties.mongoTtlDays))
+
+        val inputMessage = A2AMessage(
+            messageId = request.messageId,
+            role = "user",
+            parts = listOf(A2APart(kind = "text", text = request.text)),
+        )
+
+        val task = Task(
+            id = taskId,
+            agentId = agentId,
+            agentName = agentName,
+            userId = userId,
+            contextId = contextId,
+            state = TaskState.SUBMITTED,
+            inputMessage = inputMessage,
+            requestId = requestId,
+            createdAt = now,
+            updatedAt = now,
+            expiredAt = expiredAt,
+        )
+        taskRepositoryPort.save(task)
+        taskEventBusPort.publish(taskId, TaskEvent.of(task))
+
+        try {
+            taskPublisherPort.publish(
+                agentId = agentId,
+                payload = TaskMessagePayload(
+                    taskId = taskId,
+                    contextId = contextId,
+                    userId = userId,
+                    requestId = requestId,
+                    resultTopic = "results.api",
+                    allowedAgents = emptyList(),
+                    message = inputMessage,
+                ),
+            )
+        } catch (e: KafkaPublishException) {
+            markFailed(task, "kafka-publish-failed", e.message ?: "Kafka publish failed")
+            WideEvent.put("task_id", taskId)
+            WideEvent.put("agent_name", agentName)
+            WideEvent.put("user_id", userId)
+            WideEvent.put("return_immediately", true)
+            WideEvent.put("outcome", "kafka_publish_failed")
+            WideEvent.message("Kafka publish 실패 (async)")
+            throw e
+        }
+
+        WideEvent.put("task_id", taskId)
+        WideEvent.put("agent_name", agentName)
+        WideEvent.put("agent_id", agentId)
+        WideEvent.put("user_id", userId)
+        WideEvent.put("return_immediately", true)
+        WideEvent.put("outcome", "task_submitted")
+        WideEvent.message("태스크 async 제출 완료")
+
+        return A2ATaskMapper.toDto(task)
+    }
+
     private fun handleAwaitFailure(task: Task, throwable: Throwable): Nothing {
         val cause = (throwable as? java.util.concurrent.CompletionException)?.cause ?: throwable
         if (cause is TimeoutException) {
