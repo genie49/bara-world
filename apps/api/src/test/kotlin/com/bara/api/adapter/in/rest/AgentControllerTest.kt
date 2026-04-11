@@ -12,6 +12,7 @@ import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
+import com.bara.api.application.port.`in`.query.GetTaskQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.A2AErrorCodes
@@ -80,6 +81,9 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var getAgentCardQuery: GetAgentCardQuery
+
+    @MockkBean
+    lateinit var getTaskQuery: GetTaskQuery
 
     @MockkBean
     lateinit var sendMessageUseCase: SendMessageUseCase
@@ -294,15 +298,30 @@ class AgentControllerTest {
         val mvcResult = mockMvc.post("/agents/my-agent/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
+            content = """
+                {
+                    "jsonrpc": "2.0",
+                    "id": "req-1",
+                    "method": "message/send",
+                    "params": {
+                        "message": {
+                            "messageId": "msg-1",
+                            "parts": [{"text":"hello"}]
+                        },
+                        "contextId": "ctx-1"
+                    }
+                }
+            """.trimIndent()
         }.andExpect {
             request { asyncStarted() }
         }.andReturn()
 
         mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
             .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("t-1"))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.status.state").value("completed"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.jsonrpc").value("2.0"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("req-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.id").value("t-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.status.state").value("completed"))
     }
 
     @Test
@@ -312,7 +331,7 @@ class AgentControllerTest {
         mockMvc.post("/agents/dead/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             status { isServiceUnavailable() }
             jsonPath("$.jsonrpc") { value("2.0") }
@@ -331,7 +350,7 @@ class AgentControllerTest {
         val mvcResult = mockMvc.post("/agents/slow/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             request { asyncStarted() }
         }.andReturn()
@@ -350,7 +369,7 @@ class AgentControllerTest {
         mockMvc.post("/agents/my-agent/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             status { isBadGateway() }
             jsonPath("$.error.code") { value(A2AErrorCodes.KAFKA_PUBLISH_FAILED) }
