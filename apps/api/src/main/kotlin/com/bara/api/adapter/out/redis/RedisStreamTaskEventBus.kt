@@ -5,18 +5,23 @@ import com.bara.api.application.port.out.TaskEventBusPort
 import com.bara.api.config.TaskProperties
 import com.bara.api.domain.model.TaskEvent
 import com.fasterxml.jackson.databind.ObjectMapper
+import jakarta.annotation.PreDestroy
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.connection.stream.StreamRecords
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 @Component
 class RedisStreamTaskEventBus(
     private val redisTemplate: StringRedisTemplate,
     private val objectMapper: ObjectMapper,
     private val properties: TaskProperties,
+    private val executor: ScheduledExecutorService = EventBusPoller.newExecutor(),
 ) : TaskEventBusPort {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -36,12 +41,33 @@ class RedisStreamTaskEventBus(
         taskId: String,
         fromStreamId: String,
         listener: (TaskEvent) -> Unit,
-    ): Subscription {
-        TODO("Task 8에서 구현 — pump thread + fan-out")
-    }
+    ): Subscription = EventBusPoller(
+        redisTemplate = redisTemplate,
+        objectMapper = objectMapper,
+        streamKey = streamKey(taskId),
+        fromStreamId = fromStreamId,
+        listener = listener,
+        executor = executor,
+    )
 
     override fun await(taskId: String, timeout: Duration): CompletableFuture<TaskEvent> {
-        TODO("Task 8에서 구현")
+        val future = CompletableFuture<TaskEvent>()
+        val subscription = subscribe(taskId, "0") { event ->
+            if (event.final && !future.isDone) {
+                future.complete(event)
+            }
+        }
+        val timeoutFuture = executor.schedule({
+            if (!future.isDone) {
+                future.completeExceptionally(TimeoutException("await timeout taskId=$taskId"))
+            }
+        }, timeout.toMillis(), TimeUnit.MILLISECONDS)
+
+        future.whenComplete { _, _ ->
+            subscription.close()
+            timeoutFuture.cancel(false)
+        }
+        return future
     }
 
     override fun close(taskId: String) {
@@ -49,6 +75,11 @@ class RedisStreamTaskEventBus(
         val grace = Duration.ofSeconds(properties.streamGracePeriodSeconds)
         redisTemplate.expire(key, grace)
         logger.debug("Scheduled stream close key={} after={}s", key, grace.seconds)
+    }
+
+    @PreDestroy
+    fun shutdown() {
+        executor.shutdown()
     }
 
     private fun streamKey(taskId: String): String = "stream:task:$taskId"
