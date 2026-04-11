@@ -1,5 +1,9 @@
 package com.bara.api.adapter.`in`.rest
 
+import com.bara.api.adapter.`in`.rest.a2a.A2AMessageDto
+import com.bara.api.adapter.`in`.rest.a2a.A2APartDto
+import com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto
+import com.bara.api.adapter.`in`.rest.a2a.A2ATaskStatusDto
 import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.HeartbeatAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentCommand
@@ -14,6 +18,9 @@ import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentNotRegisteredException
 import com.bara.api.domain.exception.AgentOwnershipException
+import com.bara.api.domain.exception.AgentTimeoutException
+import com.bara.api.domain.exception.AgentUnavailableException
+import com.bara.api.domain.exception.KafkaPublishException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -29,7 +36,10 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 
 @WebMvcTest(controllers = [AgentController::class])
 @Import(ApiExceptionHandler::class)
@@ -259,6 +269,86 @@ class AgentControllerTest {
             header("X-Provider-Id", "p-1")
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST agents message send 성공 시 200 + A2ATaskDto`() {
+        val dto = A2ATaskDto(
+            id = "t-1",
+            contextId = "c-1",
+            status = A2ATaskStatusDto(
+                state = "completed",
+                message = A2AMessageDto(
+                    messageId = "m-2", role = "agent",
+                    parts = listOf(A2APartDto("text", "done")),
+                ),
+                timestamp = "2026-04-11T00:00:00Z",
+            ),
+        )
+        every {
+            sendMessageUseCase.sendBlocking(eq("user-1"), eq("my-agent"), any())
+        } returns CompletableFuture.completedFuture(dto)
+
+        val mvcResult = mockMvc.post("/agents/my-agent/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
+        }.andExpect {
+            request { asyncStarted() }
+        }.andReturn()
+
+        mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
+            .andExpect(MockMvcResultMatchers.status().isOk)
+            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("t-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.status.state").value("completed"))
+    }
+
+    @Test
+    fun `POST agents message send Agent 비활성 시 503`() {
+        every { sendMessageUseCase.sendBlocking(any(), eq("dead"), any()) } throws AgentUnavailableException()
+
+        mockMvc.post("/agents/dead/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+        }.andExpect {
+            status { isServiceUnavailable() }
+            jsonPath("$.error") { value("agent_unavailable") }
+        }
+    }
+
+    @Test
+    fun `POST agents message send Agent 타임아웃 시 504`() {
+        val failed = CompletableFuture<A2ATaskDto>()
+        failed.completeExceptionally(AgentTimeoutException())
+        every { sendMessageUseCase.sendBlocking(any(), eq("slow"), any()) } returns failed
+
+        val mvcResult = mockMvc.post("/agents/slow/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+        }.andExpect {
+            request { asyncStarted() }
+        }.andReturn()
+
+        mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
+            .andExpect(MockMvcResultMatchers.status().isGatewayTimeout)
+            .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("agent_timeout"))
+    }
+
+    @Test
+    fun `POST agents message send Kafka 실패 시 502`() {
+        every { sendMessageUseCase.sendBlocking(any(), eq("my-agent"), any()) } throws
+            KafkaPublishException("broker down")
+
+        mockMvc.post("/agents/my-agent/message:send") {
+            header("X-User-Id", "user-1")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+        }.andExpect {
+            status { isBadGateway() }
+            jsonPath("$.error") { value("kafka_publish_failed") }
         }
     }
 }

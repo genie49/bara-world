@@ -84,6 +84,3 @@ data class PartRequest(
     val text: String,
 )
 
-data class SendMessageApiResponse(
-    val taskId: String,
-)

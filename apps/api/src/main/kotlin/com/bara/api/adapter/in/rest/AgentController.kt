@@ -4,6 +4,7 @@ import com.bara.api.application.port.`in`.command.DeleteAgentUseCase
 import com.bara.api.application.port.`in`.command.HeartbeatAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
+import com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
@@ -11,6 +12,7 @@ import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.util.concurrent.CompletableFuture
 
 @RestController
 @RequestMapping("/agents")
@@ -84,14 +86,14 @@ class AgentController(
         @RequestHeader("X-User-Id") userId: String,
         @PathVariable agentName: String,
         @RequestBody request: SendMessageApiRequest,
-    ): org.springframework.http.ResponseEntity<com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto> {
+    ): CompletableFuture<ResponseEntity<A2ATaskDto>> {
         val text = request.message.parts.firstOrNull()?.text ?: ""
         val sendRequest = SendMessageUseCase.SendMessageRequest(
             messageId = request.message.messageId,
             text = text,
             contextId = request.contextId,
         )
-        val dto = sendMessageUseCase.sendBlocking(userId, agentName, sendRequest).get()
-        return org.springframework.http.ResponseEntity.ok(dto)
+        return sendMessageUseCase.sendBlocking(userId, agentName, sendRequest)
+            .thenApply { ResponseEntity.ok(it) }
     }
 }
