@@ -1,7 +1,9 @@
 package com.bara.api.e2e.support
 
 import com.bara.test.DatabaseCleaner
+import com.bara.test.KafkaContainerSupport
 import com.bara.test.MongoContainerSupport
+import com.bara.test.RedisContainerSupport
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -31,6 +33,8 @@ abstract class E2eTestBase {
         @DynamicPropertySource
         fun containerProperties(registry: DynamicPropertyRegistry) {
             MongoContainerSupport.register(registry, dbName = "bara-api-e2e")
+            RedisContainerSupport.register(registry)
+            KafkaContainerSupport.register(registry)
         }
     }
 }
