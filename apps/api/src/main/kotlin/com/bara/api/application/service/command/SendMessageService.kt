@@ -25,20 +25,22 @@ class SendMessageService(
         val taskId = UUID.randomUUID().toString()
         val requestId = UUID.randomUUID().toString()
 
-        val taskMessage = mapOf(
-            "task_id" to taskId,
-            "context_id" to request.contextId,
-            "user_id" to userId,
-            "request_id" to requestId,
-            "result_topic" to "results.api",
-            "message" to mapOf(
-                "message_id" to request.messageId,
-                "role" to "user",
-                "parts" to listOf(mapOf("text" to request.text)),
+        val payload = com.bara.api.application.port.out.TaskMessagePayload(
+            taskId = taskId,
+            contextId = request.contextId ?: java.util.UUID.randomUUID().toString(),
+            userId = userId,
+            requestId = requestId,
+            resultTopic = "results.api",
+            allowedAgents = emptyList(),
+            message = com.bara.api.domain.model.A2AMessage(
+                messageId = request.messageId,
+                role = "user",
+                parts = listOf(
+                    com.bara.api.domain.model.A2APart(kind = "text", text = request.text),
+                ),
             ),
         )
-
-        taskPublisherPort.publish(agentId, taskMessage)
+        taskPublisherPort.publish(agentId, payload)
 
         WideEvent.put("task_id", taskId)
         WideEvent.put("agent_name", agentName)

@@ -21,7 +21,7 @@ class SendMessageServiceTest {
     @Test
     fun `살아있는 Agent에 메시지를 보내면 Kafka에 발행된다`() {
         every { agentRegistryPort.getAgentId("my-agent") } returns "agent-001"
-        justRun { taskPublisherPort.publish(eq("agent-001"), any()) }
+        justRun { taskPublisherPort.publish(eq("agent-001"), any<com.bara.api.application.port.out.TaskMessagePayload>()) }
 
         val request = SendMessageUseCase.SendMessageRequest(
             messageId = "msg-1",
@@ -31,7 +31,7 @@ class SendMessageServiceTest {
         val taskId = service.sendMessage("user-1", "my-agent", request)
 
         assertNotNull(taskId)
-        verify { taskPublisherPort.publish(eq("agent-001"), any()) }
+        verify { taskPublisherPort.publish(eq("agent-001"), any<com.bara.api.application.port.out.TaskMessagePayload>()) }
     }
 
     @Test
