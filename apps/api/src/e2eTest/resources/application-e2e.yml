@@ -1,1 +1,34 @@
-# E2E test profile - MongoDB container properties injected dynamically
+# E2E test profile
+# - Mongo/Redis/Kafka properties injected dynamically by *ContainerSupport
+# - Task processing timeouts are shortened so timeout scenarios finish fast
+
+spring:
+  data:
+    mongodb:
+      auto-index-creation: true
+  kafka:
+    producer:
+      acks: all
+      delivery-timeout-ms: 5000
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: api-service-results-e2e
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual
+
+bara:
+  api:
+    task:
+      # Kafka topic 자동 생성 + consumer group rebalance + 2-hop 왕복 + Redis Stream 동기화가
+      # 하나의 request 안에 일어나므로 15초 정도 여유가 필요하다.
+      # 운영 권장값(30s)보다 짧지만, timeout 테스트를 감안해 이 정도로 유지.
+      block-timeout-seconds: 15
+      kafka-publish-timeout-seconds: 5
+      stream-grace-period-seconds: 2
+      mongo-ttl-days: 7

@@ -55,17 +55,7 @@ class AgentFlowScenarioTest : E2eTestBase() {
                 "agentCard": {
                     "name": "e2e-test-agent",
                     "description": "E2E 테스트용 Agent",
-                    "version": "1.0.0",
-                    "defaultInputModes": ["text/plain"],
-                    "defaultOutputModes": ["text/plain"],
-                    "capabilities": { "streaming": false, "pushNotifications": false },
-                    "skills": [{
-                        "id": "translate",
-                        "name": "번역",
-                        "description": "다국어 번역 스킬",
-                        "tags": ["translation"],
-                        "examples": ["한국어를 영어로 번역해줘"]
-                    }]
+                    "version": "1.0.0"
                 }
             }
         """.trimIndent()
@@ -119,10 +109,9 @@ class AgentFlowScenarioTest : E2eTestBase() {
         assertThat(responseBody["id"]).isEqualTo(agentId)
         assertThat(responseBody["name"]).isEqualTo("e2e-test-agent")
         val agentCard = responseBody["agentCard"] as Map<*, *>
+        assertThat(agentCard["name"]).isEqualTo("e2e-test-agent")
         assertThat(agentCard["description"]).isEqualTo("E2E 테스트용 Agent")
         assertThat(agentCard["version"]).isEqualTo("1.0.0")
-        val skills = agentCard["skills"] as List<*>
-        assertThat(skills).hasSize(1)
     }
 
     @Test

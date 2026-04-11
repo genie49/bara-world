@@ -1,8 +1,12 @@
 package com.bara.api
 
+import com.bara.api.adapter.`in`.kafka.ResultConsumerAdapter
+import com.bara.api.adapter.out.persistence.TaskMongoDataRepository
 import com.bara.api.application.port.out.AgentRegistryPort
 import com.bara.api.application.port.out.AgentRepository
+import com.bara.api.application.port.out.TaskEventBusPort
 import com.bara.api.application.port.out.TaskPublisherPort
+import com.bara.api.application.port.out.TaskRepositoryPort
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
@@ -30,6 +34,18 @@ class BaraApiApplicationTest {
 
     @MockkBean
     lateinit var taskPublisherPort: TaskPublisherPort
+
+    @MockkBean
+    lateinit var taskRepositoryPort: TaskRepositoryPort
+
+    @MockkBean
+    lateinit var taskEventBusPort: TaskEventBusPort
+
+    @MockkBean
+    lateinit var taskMongoDataRepository: TaskMongoDataRepository
+
+    @MockkBean
+    lateinit var resultConsumerAdapter: ResultConsumerAdapter
 
     @Test
     fun contextLoads() {

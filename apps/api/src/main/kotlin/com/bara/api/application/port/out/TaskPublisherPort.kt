@@ -1,5 +1,9 @@
 package com.bara.api.application.port.out
 
 interface TaskPublisherPort {
-    fun publish(agentId: String, taskMessage: Map<String, Any?>)
+    /**
+     * Kafka tasks.{agentId} 발행. ack 대기 후 반환.
+     * 실패 시 KafkaPublishException.
+     */
+    fun publish(agentId: String, payload: TaskMessagePayload)
 }

@@ -12,6 +12,7 @@ dependencyManagement {
 dependencies {
     api(libs.testcontainers.core)
     api(libs.testcontainers.junit.jupiter)
+    api(libs.testcontainers.kafka)
     api("org.springframework.boot:spring-boot-starter-test")
     implementation("org.springframework.data:spring-data-mongodb")
     implementation("org.mongodb:mongodb-driver-sync")

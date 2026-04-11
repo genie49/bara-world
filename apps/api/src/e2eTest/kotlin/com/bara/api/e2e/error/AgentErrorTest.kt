@@ -39,11 +39,7 @@ class AgentErrorTest : E2eTestBase() {
                 "agentCard": {
                     "name": "$name",
                     "description": "테스트 Agent",
-                    "version": "1.0.0",
-                    "defaultInputModes": ["text/plain"],
-                    "defaultOutputModes": ["text/plain"],
-                    "capabilities": { "streaming": false, "pushNotifications": false },
-                    "skills": []
+                    "version": "1.0.0"
                 }
             }
         """.trimIndent()
@@ -100,11 +96,7 @@ class AgentErrorTest : E2eTestBase() {
                 "agentCard": {
                     "name": "duplicate-agent",
                     "description": "중복 Agent",
-                    "version": "1.0.0",
-                    "defaultInputModes": ["text/plain"],
-                    "defaultOutputModes": ["text/plain"],
-                    "capabilities": { "streaming": false, "pushNotifications": false },
-                    "skills": []
+                    "version": "1.0.0"
                 }
             }
         """.trimIndent()
