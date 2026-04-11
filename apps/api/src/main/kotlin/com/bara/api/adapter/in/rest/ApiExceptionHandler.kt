@@ -4,9 +4,6 @@ import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotRegisteredException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentOwnershipException
-import com.bara.api.domain.exception.AgentTimeoutException
-import com.bara.api.domain.exception.AgentUnavailableException
-import com.bara.api.domain.exception.KafkaPublishException
 import com.bara.common.logging.WideEvent
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -50,32 +47,5 @@ class ApiExceptionHandler {
         WideEvent.message("Agent 미등록 상태")
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(ErrorResponse("agent_not_registered", ex.message ?: "Agent is not registered"))
-    }
-
-    @ExceptionHandler(AgentUnavailableException::class)
-    fun handleAgentUnavailable(ex: AgentUnavailableException): ResponseEntity<ErrorResponse> {
-        WideEvent.put("error_type", "AgentUnavailableException")
-        WideEvent.put("outcome", "agent_unavailable")
-        WideEvent.message("Agent 비활성")
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(ErrorResponse("agent_unavailable", ex.message ?: "Agent is not available"))
-    }
-
-    @ExceptionHandler(AgentTimeoutException::class)
-    fun handleAgentTimeout(ex: AgentTimeoutException): ResponseEntity<ErrorResponse> {
-        WideEvent.put("error_type", "AgentTimeoutException")
-        WideEvent.put("outcome", "agent_timeout")
-        WideEvent.message("Agent 응답 타임아웃")
-        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
-            .body(ErrorResponse("agent_timeout", ex.message ?: "Agent did not respond within timeout"))
-    }
-
-    @ExceptionHandler(KafkaPublishException::class)
-    fun handleKafkaPublish(ex: KafkaPublishException): ResponseEntity<ErrorResponse> {
-        WideEvent.put("error_type", "KafkaPublishException")
-        WideEvent.put("outcome", "kafka_publish_failed")
-        WideEvent.message("Kafka publish 실패")
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-            .body(ErrorResponse("kafka_publish_failed", ex.message ?: "Kafka publish failed"))
     }
 }

@@ -14,6 +14,7 @@ import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import com.bara.api.application.port.out.TaskPublisherPort
+import com.bara.api.domain.exception.A2AErrorCodes
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentNotRegisteredException
@@ -42,7 +43,7 @@ import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
 @WebMvcTest(controllers = [AgentController::class])
-@Import(ApiExceptionHandler::class)
+@Import(ApiExceptionHandler::class, A2AExceptionHandler::class)
 @TestPropertySource(
     properties = [
         "spring.autoconfigure.exclude=" +
@@ -314,7 +315,10 @@ class AgentControllerTest {
             content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
         }.andExpect {
             status { isServiceUnavailable() }
-            jsonPath("$.error") { value("agent_unavailable") }
+            jsonPath("$.jsonrpc") { value("2.0") }
+            jsonPath("$.error.code") { value(A2AErrorCodes.AGENT_UNAVAILABLE) }
+            jsonPath("$.error.message") { value("Agent is not available") }
+            jsonPath("$.result") { doesNotExist() }
         }
     }
 
@@ -334,7 +338,8 @@ class AgentControllerTest {
 
         mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
             .andExpect(MockMvcResultMatchers.status().isGatewayTimeout)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("agent_timeout"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.error.code").value(A2AErrorCodes.AGENT_TIMEOUT))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.error.message").value("Agent did not respond within timeout"))
     }
 
     @Test
@@ -348,7 +353,8 @@ class AgentControllerTest {
             content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
         }.andExpect {
             status { isBadGateway() }
-            jsonPath("$.error") { value("kafka_publish_failed") }
+            jsonPath("$.error.code") { value(A2AErrorCodes.KAFKA_PUBLISH_FAILED) }
+            jsonPath("$.error.message") { value("broker down") }
         }
     }
 }
