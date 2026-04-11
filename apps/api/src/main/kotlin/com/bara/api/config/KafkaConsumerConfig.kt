@@ -16,15 +16,19 @@ import org.springframework.kafka.listener.ContainerProperties
 class KafkaConsumerConfig(
     @Value("\${spring.kafka.bootstrap-servers}")
     private val bootstrapServers: String,
+    @Value("\${spring.kafka.consumer.group-id:api-service-results}")
+    private val groupId: String,
+    @Value("\${spring.kafka.consumer.auto-offset-reset:latest}")
+    private val autoOffsetReset: String,
 ) {
 
     @Bean(name = ["resultConsumerFactory"])
     fun resultConsumerFactory(): ConsumerFactory<String, String> {
         val props = mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
-            ConsumerConfig.GROUP_ID_CONFIG to "api-service-results",
+            ConsumerConfig.GROUP_ID_CONFIG to groupId,
             ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to false,
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "latest",
+            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to autoOffsetReset,
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
         )
