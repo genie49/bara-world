@@ -84,14 +84,14 @@ class AgentController(
         @RequestHeader("X-User-Id") userId: String,
         @PathVariable agentName: String,
         @RequestBody request: SendMessageApiRequest,
-    ): ResponseEntity<SendMessageApiResponse> {
+    ): org.springframework.http.ResponseEntity<com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto> {
         val text = request.message.parts.firstOrNull()?.text ?: ""
         val sendRequest = SendMessageUseCase.SendMessageRequest(
             messageId = request.message.messageId,
             text = text,
             contextId = request.contextId,
         )
-        val taskId = sendMessageUseCase.sendMessage(userId, agentName, sendRequest)
-        return ResponseEntity.ok(SendMessageApiResponse(taskId = taskId))
+        val dto = sendMessageUseCase.sendBlocking(userId, agentName, sendRequest).get()
+        return org.springframework.http.ResponseEntity.ok(dto)
     }
 }

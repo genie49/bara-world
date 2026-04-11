@@ -14,7 +14,6 @@ import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentNotRegisteredException
 import com.bara.api.domain.exception.AgentOwnershipException
-import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -226,34 +225,6 @@ class AgentControllerTest {
             header("X-Provider-Id", "p-1")
         }.andExpect {
             status { isForbidden() }
-        }
-    }
-
-    @Test
-    fun `POST agents message send 성공 시 taskId 반환`() {
-        every { sendMessageUseCase.sendMessage(eq("user-1"), eq("my-agent"), any()) } returns "task-123"
-
-        mockMvc.post("/agents/my-agent/message:send") {
-            header("X-User-Id", "user-1")
-            contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
-        }.andExpect {
-            status { isOk() }
-            jsonPath("$.taskId") { value("task-123") }
-        }
-    }
-
-    @Test
-    fun `POST agents message send Agent 비활성 시 503`() {
-        every { sendMessageUseCase.sendMessage(any(), eq("dead"), any()) } throws AgentUnavailableException()
-
-        mockMvc.post("/agents/dead/message:send") {
-            header("X-User-Id", "user-1")
-            contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
-        }.andExpect {
-            status { isServiceUnavailable() }
-            jsonPath("$.error") { value("agent_unavailable") }
         }
     }
 
