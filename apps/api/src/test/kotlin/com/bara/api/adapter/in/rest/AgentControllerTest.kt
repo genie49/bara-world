@@ -23,6 +23,8 @@ import com.bara.api.domain.exception.AgentOwnershipException
 import com.bara.api.domain.exception.AgentTimeoutException
 import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.exception.KafkaPublishException
+import com.bara.api.domain.exception.TaskAccessDeniedException
+import com.bara.api.domain.exception.TaskNotFoundException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -374,6 +376,103 @@ class AgentControllerTest {
             status { isBadGateway() }
             jsonPath("$.error.code") { value(A2AErrorCodes.KAFKA_PUBLISH_FAILED) }
             jsonPath("$.error.message") { value("broker down") }
+        }
+    }
+
+    @Test
+    fun `sendMessage - returnImmediately true - sendAsync 호출 후 submitted DTO envelope 반환`() {
+        val submittedDto = A2ATaskDto(
+            id = "task-async-1",
+            contextId = "ctx-1",
+            status = A2ATaskStatusDto(
+                state = "submitted",
+                message = null,
+                timestamp = Instant.parse("2026-04-11T00:00:00Z").toString(),
+            ),
+            artifacts = emptyList(),
+        )
+        every {
+            sendMessageUseCase.sendAsync("user-1", "my-agent", any())
+        } returns submittedDto
+
+        val body = """
+            {
+                "jsonrpc": "2.0",
+                "id": "req-async-1",
+                "method": "message/send",
+                "params": {
+                    "message": {
+                        "messageId": "m-async-1",
+                        "parts": [{"text": "hi"}]
+                    },
+                    "configuration": { "returnImmediately": true }
+                }
+            }
+        """.trimIndent()
+
+        val mvcResult = mockMvc.post("/agents/my-agent/message:send") {
+            contentType = MediaType.APPLICATION_JSON
+            header("X-User-Id", "user-1")
+            content = body
+        }.andExpect {
+            request { asyncStarted() }
+        }.andReturn()
+
+        mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
+            .andExpect(MockMvcResultMatchers.status().isOk)
+            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("req-async-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.id").value("task-async-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.status.state").value("submitted"))
+    }
+
+    @Test
+    fun `getTask - 정상 조회 - 200 envelope result 반환`() {
+        val dto = A2ATaskDto(
+            id = "task-1",
+            contextId = "ctx-1",
+            status = A2ATaskStatusDto(
+                state = "completed",
+                message = null,
+                timestamp = Instant.parse("2026-04-11T00:00:00Z").toString(),
+            ),
+            artifacts = emptyList(),
+        )
+        every { getTaskQuery.getTask("user-1", "task-1") } returns dto
+
+        mockMvc.get("/agents/my-agent/tasks/task-1") {
+            header("X-User-Id", "user-1")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.jsonrpc") { value("2.0") }
+            jsonPath("$.result.id") { value("task-1") }
+            jsonPath("$.result.status.state") { value("completed") }
+            jsonPath("$.error") { doesNotExist() }
+        }
+    }
+
+    @Test
+    fun `getTask - TaskNotFoundException - 404 envelope error`() {
+        every { getTaskQuery.getTask("user-1", "missing") } throws TaskNotFoundException("missing")
+
+        mockMvc.get("/agents/my-agent/tasks/missing") {
+            header("X-User-Id", "user-1")
+        }.andExpect {
+            status { isNotFound() }
+            jsonPath("$.error.code") { value(A2AErrorCodes.TASK_NOT_FOUND) }
+            jsonPath("$.error.message") { value("Task not found: missing") }
+        }
+    }
+
+    @Test
+    fun `getTask - TaskAccessDeniedException - 403 envelope error`() {
+        every { getTaskQuery.getTask("attacker", "task-1") } throws TaskAccessDeniedException("task-1")
+
+        mockMvc.get("/agents/my-agent/tasks/task-1") {
+            header("X-User-Id", "attacker")
+        }.andExpect {
+            status { isForbidden() }
+            jsonPath("$.error.code") { value(A2AErrorCodes.TASK_ACCESS_DENIED) }
+            jsonPath("$.error.message") { value("Task access denied: task-1") }
         }
     }
 }
