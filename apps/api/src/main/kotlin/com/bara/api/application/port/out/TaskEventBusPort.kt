@@ -32,6 +32,9 @@ interface TaskEventBusPort {
 
     /** 터미널 이후 grace period 후 스트림 DEL. 구현은 TTL `EXPIRE` 권장. */
     fun close(taskId: String)
+
+    /** 스트림 키가 Redis 에 아직 존재하는지. grace period 내면 true. */
+    fun streamExists(taskId: String): Boolean
 }
 
 interface Subscription : AutoCloseable {

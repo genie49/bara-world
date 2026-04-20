@@ -77,6 +77,9 @@ class RedisStreamTaskEventBus(
         logger.debug("Scheduled stream close key={} after={}s", key, grace.seconds)
     }
 
+    override fun streamExists(taskId: String): Boolean =
+        redisTemplate.hasKey(streamKey(taskId))
+
     @PreDestroy
     fun shutdown() {
         executor.shutdown()
