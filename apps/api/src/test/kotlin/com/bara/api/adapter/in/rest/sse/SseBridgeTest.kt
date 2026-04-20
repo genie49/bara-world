@@ -104,6 +104,57 @@ class SseBridgeTest {
     }
 
     @Test
+    fun `send IOException releases entry and closes subscription`() {
+        val bridge = bridge()
+        val emitter = spyk(SseEmitter())
+        val subscription = mockk<Subscription>(relaxed = true)
+
+        every { emitter.send(any<SseEmitter.SseEventBuilder>()) } throws java.io.IOException("client gone")
+
+        bridge.attach("task-1", TextNode("env-1"), emitter, subscription)
+        assertEquals(1, bridge.activeCount())
+
+        bridge.send("task-1", "1-0", sampleTask(), final = false)
+
+        assertEquals(0, bridge.activeCount())
+        verify(exactly = 1) { subscription.close() }
+    }
+
+    @Test
+    fun `send IllegalStateException releases entry`() {
+        val bridge = bridge()
+        val emitter = spyk(SseEmitter())
+        val subscription = mockk<Subscription>(relaxed = true)
+
+        every { emitter.send(any<SseEmitter.SseEventBuilder>()) } throws IllegalStateException("emitter already completed")
+
+        bridge.attach("task-1", TextNode("env-1"), emitter, subscription)
+        assertEquals(1, bridge.activeCount())
+
+        bridge.send("task-1", "1-0", sampleTask(), final = false)
+
+        assertEquals(0, bridge.activeCount())
+        verify(exactly = 1) { subscription.close() }
+    }
+
+    @Test
+    fun `heartbeat failure releases broken entry`() {
+        val bridge = bridge()
+        val emitter = spyk(SseEmitter())
+        val subscription = mockk<Subscription>(relaxed = true)
+
+        every { emitter.send(any<SseEmitter.SseEventBuilder>()) } throws java.io.IOException("client gone")
+
+        bridge.attach("task-1", TextNode("env-1"), emitter, subscription)
+        assertEquals(1, bridge.activeCount())
+
+        bridge.heartbeat()
+
+        assertEquals(0, bridge.activeCount())
+        verify(exactly = 1) { subscription.close() }
+    }
+
+    @Test
     fun `attach registers onCompletion callback that releases subscription`() {
         val bridge = bridge()
         val emitter = spyk(SseEmitter())

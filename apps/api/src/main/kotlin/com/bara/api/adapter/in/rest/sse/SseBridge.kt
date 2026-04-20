@@ -72,8 +72,11 @@ class SseBridge(
         active.forEach { (taskId, entry) ->
             try {
                 entry.emitter.send(SseEmitter.event().comment("keepalive"))
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 logger.debug("heartbeat failed taskId={}: {}", taskId, e.message)
+                release(taskId, "heartbeat-fail")
+            } catch (e: IllegalStateException) {
+                logger.debug("heartbeat on closed emitter taskId={}: {}", taskId, e.message)
                 release(taskId, "heartbeat-fail")
             }
         }
@@ -85,7 +88,7 @@ class SseBridge(
         active.remove(taskId)?.also {
             try {
                 it.subscription.close()
-            } catch (_: Throwable) {
+            } catch (_: Exception) {
                 // Subscription.close() must not propagate cleanup errors.
             }
         }
