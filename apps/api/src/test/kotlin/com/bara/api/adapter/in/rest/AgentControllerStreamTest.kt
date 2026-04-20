@@ -168,6 +168,7 @@ class AgentControllerStreamTest {
 
         mockMvc.get("/agents/agent-a/tasks/expired-task:subscribe") {
             header("X-User-Id", "user-1")
+            accept = MediaType.TEXT_EVENT_STREAM
         }.andExpect {
             status { isGone() }
             jsonPath("$.error.code") { value(A2AErrorCodes.STREAM_UNSUPPORTED) }
@@ -183,6 +184,7 @@ class AgentControllerStreamTest {
 
         mockMvc.get("/agents/agent-a/tasks/missing:subscribe") {
             header("X-User-Id", "user-1")
+            accept = MediaType.TEXT_EVENT_STREAM
         }.andExpect {
             status { isNotFound() }
             jsonPath("$.error.code") { value(A2AErrorCodes.TASK_NOT_FOUND) }
@@ -198,10 +200,25 @@ class AgentControllerStreamTest {
 
         mockMvc.get("/agents/agent-a/tasks/task-1:subscribe") {
             header("X-User-Id", "attacker")
+            accept = MediaType.TEXT_EVENT_STREAM
         }.andExpect {
             status { isForbidden() }
             jsonPath("$.error.code") { value(A2AErrorCodes.TASK_ACCESS_DENIED) }
             jsonPath("$.error.message") { value("Task access denied: task-1") }
+        }
+    }
+
+    @Test
+    fun `subscribe with Accept text-event-stream returns JSON error body on StreamUnsupportedException`() {
+        every { subscribeTaskQuery.subscribe(any(), any(), any()) } throws StreamUnsupportedException("gone")
+
+        mockMvc.get("/agents/agent-a/tasks/task-x:subscribe") {
+            header("X-User-Id", "u1")
+            accept = MediaType.TEXT_EVENT_STREAM
+        }.andExpect {
+            status { isGone() }
+            content { contentTypeCompatibleWith(MediaType.APPLICATION_JSON) }
+            jsonPath("$.error.code") { value(-32067) }
         }
     }
 }
