@@ -40,7 +40,7 @@ class RedisStreamTaskEventBus(
     override fun subscribe(
         taskId: String,
         fromStreamId: String,
-        listener: (TaskEvent) -> Unit,
+        listener: (entryId: String, event: TaskEvent) -> Unit,
     ): Subscription = EventBusPoller(
         redisTemplate = redisTemplate,
         objectMapper = objectMapper,
@@ -52,7 +52,7 @@ class RedisStreamTaskEventBus(
 
     override fun await(taskId: String, timeout: Duration): CompletableFuture<TaskEvent> {
         val future = CompletableFuture<TaskEvent>()
-        val subscription = subscribe(taskId, "0") { event ->
+        val subscription = subscribe(taskId, "0") { _, event ->
             if (event.final && !future.isDone) {
                 future.complete(event)
             }

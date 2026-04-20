@@ -29,7 +29,7 @@ class EventBusPoller(
     private val objectMapper: ObjectMapper,
     private val streamKey: String,
     fromStreamId: String,
-    private val listener: (TaskEvent) -> Unit,
+    private val listener: (entryId: String, event: TaskEvent) -> Unit,
     private val executor: ScheduledExecutorService,
     private val pollIntervalMs: Long = 200,
 ) : Subscription {
@@ -56,12 +56,13 @@ class EventBusPoller(
             for (record in records) {
                 val json = record.value["event"]?.toString() ?: continue
                 val event = TaskEventJson.deserialize(objectMapper, json)
+                val id = record.id.toString()
                 try {
-                    listener(event)
+                    listener(id, event)
                 } catch (e: Throwable) {
                     logger.error("Subscriber listener threw for stream={} id={}", streamKey, record.id, e)
                 }
-                lastId.set(record.id.toString())
+                lastId.set(id)
             }
         } catch (e: Throwable) {
             logger.warn("Poll error stream={}: {}", streamKey, e.message)

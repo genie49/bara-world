@@ -16,16 +16,19 @@ interface TaskEventBusPort {
      *   "0"        — 처음부터 (backfill + tailing)
      *   "<id>"     — 특정 offset 이후 (Last-Event-ID 재연결)
      * listener는 백그라운드 스레드에서 호출된다.
+     * listener 는 첫 인자로 Redis Stream entry id (`ms-seq` 형식) 를,
+     * 두번째 인자로 역직렬화된 `TaskEvent` 를 받는다. SSE frame 의 `id:` 필드에
+     * 그대로 사용되어 Last-Event-ID 재연결 시 정확한 offset 에서 재개할 수 있다.
      */
     fun subscribe(
         taskId: String,
         fromStreamId: String,
-        listener: (TaskEvent) -> Unit,
+        listener: (entryId: String, event: TaskEvent) -> Unit,
     ): Subscription
 
     /**
      * 블로킹 대기 편의 API. 내부 구현:
-     *   subscribe(taskId, "0") { event -> if (event.final) future.complete(event) }
+     *   subscribe(taskId, "0") { _, event -> if (event.final) future.complete(event) }
      *   future.orTimeout(timeout).whenComplete { _, _ -> subscription.close() }
      */
     fun await(taskId: String, timeout: Duration): CompletableFuture<TaskEvent>

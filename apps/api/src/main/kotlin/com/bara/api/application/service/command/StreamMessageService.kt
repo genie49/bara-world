@@ -80,10 +80,9 @@ class StreamMessageService(
 
         // ③ Stream 구독 등록 (fromStreamId="0" → backfill + tailing)
         val emitter = SseEmitter(properties.emitterTimeoutMs)
-        val subscription = taskEventBusPort.subscribe(taskId, "0") { event ->
+        val subscription = taskEventBusPort.subscribe(taskId, "0") { entryId, event ->
             val dto = A2ATaskMapper.fromEvent(task, event)
-            // TODO(Task 9): propagate real Redis Stream entry id once listener signature is extended.
-            sseBridge.send(taskId, "0", dto, event.final)
+            sseBridge.send(taskId, entryId, dto, event.final)
         }
 
         // ④ SSE 생명주기 등록 (emitter 종료 시 subscription 도 close)

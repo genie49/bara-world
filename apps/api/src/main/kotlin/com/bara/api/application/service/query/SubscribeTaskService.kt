@@ -49,10 +49,9 @@ class SubscribeTaskService(
 
         val fromId = lastEventId ?: "0"
         val emitter = SseEmitter(properties.emitterTimeoutMs)
-        val subscription = taskEventBusPort.subscribe(taskId, fromId) { event ->
+        val subscription = taskEventBusPort.subscribe(taskId, fromId) { entryId, event ->
             val dto = A2ATaskMapper.fromEvent(task, event)
-            // TODO(Task 9): propagate real Redis Stream entry id once listener signature is extended.
-            sseBridge.send(taskId, "0", dto, event.final)
+            sseBridge.send(taskId, entryId, dto, event.final)
         }
         sseBridge.attach(taskId, envelopeId = null, emitter = emitter, subscription = subscription)
 

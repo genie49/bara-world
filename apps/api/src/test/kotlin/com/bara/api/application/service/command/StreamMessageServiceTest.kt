@@ -146,7 +146,7 @@ class StreamMessageServiceTest {
         every { taskRepositoryPort.save(capture(taskSlot)) } answers { taskSlot.captured }
         every { taskEventBusPort.publish(any(), any()) } returns "1-0"
         val subscription = mockk<Subscription>(relaxed = true)
-        val listenerSlot = slot<(TaskEvent) -> Unit>()
+        val listenerSlot = slot<(String, TaskEvent) -> Unit>()
         every {
             taskEventBusPort.subscribe(any(), "0", capture(listenerSlot))
         } returns subscription
@@ -157,8 +157,8 @@ class StreamMessageServiceTest {
         val capturedTaskId = taskSlot.captured.id
         val capturedContextId = taskSlot.captured.contextId
 
-        // 캡처된 listener 를 synthetic TaskEvent 로 직접 호출하여
-        // SseBridge.send(taskId, "0", dto, final) 로 포워딩되는지 검증한다.
+        // 캡처된 listener 를 synthetic entryId + TaskEvent 로 직접 호출하여
+        // SseBridge.send(taskId, entryId, dto, final) 로 포워딩되는지 검증한다.
         val finalEvent = TaskEvent(
             taskId = capturedTaskId,
             contextId = capturedContextId,
@@ -170,10 +170,10 @@ class StreamMessageServiceTest {
             final = true,
             timestamp = Instant.now(),
         )
-        listenerSlot.captured.invoke(finalEvent)
+        listenerSlot.captured.invoke("1712665200000-0", finalEvent)
 
         verify(exactly = 1) {
-            sseBridge.send(capturedTaskId, "0", any<A2ATaskDto>(), true)
+            sseBridge.send(capturedTaskId, "1712665200000-0", any<A2ATaskDto>(), true)
         }
     }
 

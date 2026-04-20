@@ -143,7 +143,7 @@ class SubscribeTaskServiceTest {
         val storedTask = task(state = TaskState.WORKING)
         every { taskRepositoryPort.findById("t-1") } returns storedTask
         val subscription = mockk<Subscription>(relaxed = true)
-        val listenerSlot = slot<(TaskEvent) -> Unit>()
+        val listenerSlot = slot<(String, TaskEvent) -> Unit>()
         every {
             taskEventBusPort.subscribe("t-1", "0", capture(listenerSlot))
         } returns subscription
@@ -162,10 +162,10 @@ class SubscribeTaskServiceTest {
             final = true,
             timestamp = now.plusSeconds(1),
         )
-        listenerSlot.captured.invoke(finalEvent)
+        listenerSlot.captured.invoke("1712665200000-0", finalEvent)
 
         verify(exactly = 1) {
-            sseBridge.send("t-1", "0", any<A2ATaskDto>(), true)
+            sseBridge.send("t-1", "1712665200000-0", any<A2ATaskDto>(), true)
         }
     }
 }
