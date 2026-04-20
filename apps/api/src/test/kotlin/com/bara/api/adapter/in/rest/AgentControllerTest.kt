@@ -12,8 +12,10 @@ import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
+import com.bara.api.application.port.`in`.query.GetTaskQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import com.bara.api.application.port.out.TaskPublisherPort
+import com.bara.api.domain.exception.A2AErrorCodes
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
 import com.bara.api.domain.exception.AgentNotFoundException
 import com.bara.api.domain.exception.AgentNotRegisteredException
@@ -21,6 +23,8 @@ import com.bara.api.domain.exception.AgentOwnershipException
 import com.bara.api.domain.exception.AgentTimeoutException
 import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.exception.KafkaPublishException
+import com.bara.api.domain.exception.TaskAccessDeniedException
+import com.bara.api.domain.exception.TaskNotFoundException
 import com.bara.api.domain.model.Agent
 import com.bara.api.domain.model.AgentCard
 import com.ninjasquad.springmockk.MockkBean
@@ -42,7 +46,7 @@ import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
 @WebMvcTest(controllers = [AgentController::class])
-@Import(ApiExceptionHandler::class)
+@Import(ApiExceptionHandler::class, A2AExceptionHandler::class)
 @TestPropertySource(
     properties = [
         "spring.autoconfigure.exclude=" +
@@ -79,6 +83,9 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var getAgentCardQuery: GetAgentCardQuery
+
+    @MockkBean
+    lateinit var getTaskQuery: GetTaskQuery
 
     @MockkBean
     lateinit var sendMessageUseCase: SendMessageUseCase
@@ -293,15 +300,30 @@ class AgentControllerTest {
         val mvcResult = mockMvc.post("/agents/my-agent/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hello"}]},"contextId":"ctx-1"}"""
+            content = """
+                {
+                    "jsonrpc": "2.0",
+                    "id": "req-1",
+                    "method": "message/send",
+                    "params": {
+                        "message": {
+                            "messageId": "msg-1",
+                            "parts": [{"text":"hello"}]
+                        },
+                        "contextId": "ctx-1"
+                    }
+                }
+            """.trimIndent()
         }.andExpect {
             request { asyncStarted() }
         }.andReturn()
 
         mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
             .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("t-1"))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.status.state").value("completed"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.jsonrpc").value("2.0"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("req-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.id").value("t-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.status.state").value("completed"))
     }
 
     @Test
@@ -311,10 +333,13 @@ class AgentControllerTest {
         mockMvc.post("/agents/dead/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             status { isServiceUnavailable() }
-            jsonPath("$.error") { value("agent_unavailable") }
+            jsonPath("$.jsonrpc") { value("2.0") }
+            jsonPath("$.error.code") { value(A2AErrorCodes.AGENT_UNAVAILABLE) }
+            jsonPath("$.error.message") { value("Agent is not available") }
+            jsonPath("$.result") { doesNotExist() }
         }
     }
 
@@ -327,14 +352,15 @@ class AgentControllerTest {
         val mvcResult = mockMvc.post("/agents/slow/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             request { asyncStarted() }
         }.andReturn()
 
         mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
             .andExpect(MockMvcResultMatchers.status().isGatewayTimeout)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("agent_timeout"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.error.code").value(A2AErrorCodes.AGENT_TIMEOUT))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.error.message").value("Agent did not respond within timeout"))
     }
 
     @Test
@@ -345,10 +371,108 @@ class AgentControllerTest {
         mockMvc.post("/agents/my-agent/message:send") {
             header("X-User-Id", "user-1")
             contentType = MediaType.APPLICATION_JSON
-            content = """{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}"""
+            content = """{"jsonrpc":"2.0","id":"req-1","method":"message/send","params":{"message":{"messageId":"msg-1","parts":[{"text":"hi"}]}}}"""
         }.andExpect {
             status { isBadGateway() }
-            jsonPath("$.error") { value("kafka_publish_failed") }
+            jsonPath("$.error.code") { value(A2AErrorCodes.KAFKA_PUBLISH_FAILED) }
+            jsonPath("$.error.message") { value("broker down") }
+        }
+    }
+
+    @Test
+    fun `sendMessage - returnImmediately true - sendAsync 호출 후 submitted DTO envelope 반환`() {
+        val submittedDto = A2ATaskDto(
+            id = "task-async-1",
+            contextId = "ctx-1",
+            status = A2ATaskStatusDto(
+                state = "submitted",
+                message = null,
+                timestamp = Instant.parse("2026-04-11T00:00:00Z").toString(),
+            ),
+            artifacts = emptyList(),
+        )
+        every {
+            sendMessageUseCase.sendAsync("user-1", "my-agent", any())
+        } returns submittedDto
+
+        val body = """
+            {
+                "jsonrpc": "2.0",
+                "id": "req-async-1",
+                "method": "message/send",
+                "params": {
+                    "message": {
+                        "messageId": "m-async-1",
+                        "parts": [{"text": "hi"}]
+                    },
+                    "configuration": { "returnImmediately": true }
+                }
+            }
+        """.trimIndent()
+
+        val mvcResult = mockMvc.post("/agents/my-agent/message:send") {
+            contentType = MediaType.APPLICATION_JSON
+            header("X-User-Id", "user-1")
+            content = body
+        }.andExpect {
+            request { asyncStarted() }
+        }.andReturn()
+
+        mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(mvcResult))
+            .andExpect(MockMvcResultMatchers.status().isOk)
+            .andExpect(MockMvcResultMatchers.jsonPath("$.id").value("req-async-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.id").value("task-async-1"))
+            .andExpect(MockMvcResultMatchers.jsonPath("$.result.status.state").value("submitted"))
+    }
+
+    @Test
+    fun `getTask - 정상 조회 - 200 envelope result 반환`() {
+        val dto = A2ATaskDto(
+            id = "task-1",
+            contextId = "ctx-1",
+            status = A2ATaskStatusDto(
+                state = "completed",
+                message = null,
+                timestamp = Instant.parse("2026-04-11T00:00:00Z").toString(),
+            ),
+            artifacts = emptyList(),
+        )
+        every { getTaskQuery.getTask("user-1", "task-1") } returns dto
+
+        mockMvc.get("/agents/my-agent/tasks/task-1") {
+            header("X-User-Id", "user-1")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.jsonrpc") { value("2.0") }
+            jsonPath("$.result.id") { value("task-1") }
+            jsonPath("$.result.status.state") { value("completed") }
+            jsonPath("$.error") { doesNotExist() }
+        }
+    }
+
+    @Test
+    fun `getTask - TaskNotFoundException - 404 envelope error`() {
+        every { getTaskQuery.getTask("user-1", "missing") } throws TaskNotFoundException("missing")
+
+        mockMvc.get("/agents/my-agent/tasks/missing") {
+            header("X-User-Id", "user-1")
+        }.andExpect {
+            status { isNotFound() }
+            jsonPath("$.error.code") { value(A2AErrorCodes.TASK_NOT_FOUND) }
+            jsonPath("$.error.message") { value("Task not found: missing") }
+        }
+    }
+
+    @Test
+    fun `getTask - TaskAccessDeniedException - 403 envelope error`() {
+        every { getTaskQuery.getTask("attacker", "task-1") } throws TaskAccessDeniedException("task-1")
+
+        mockMvc.get("/agents/my-agent/tasks/task-1") {
+            header("X-User-Id", "attacker")
+        }.andExpect {
+            status { isForbidden() }
+            jsonPath("$.error.code") { value(A2AErrorCodes.TASK_ACCESS_DENIED) }
+            jsonPath("$.error.message") { value("Task access denied: task-1") }
         }
     }
 }

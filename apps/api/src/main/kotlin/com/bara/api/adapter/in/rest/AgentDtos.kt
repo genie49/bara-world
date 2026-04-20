@@ -70,9 +70,14 @@ data class ErrorResponse(val error: String, val message: String)
 
 // ── A2A Message ──
 
-data class SendMessageApiRequest(
+data class SendMessageParams(
     val message: MessageRequest,
     val contextId: String? = null,
+    val configuration: ConfigurationRequest? = null,
+)
+
+data class ConfigurationRequest(
+    val returnImmediately: Boolean = false,
 )
 
 data class MessageRequest(

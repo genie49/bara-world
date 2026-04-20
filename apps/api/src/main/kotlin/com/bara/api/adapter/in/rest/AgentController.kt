@@ -5,9 +5,12 @@ import com.bara.api.application.port.`in`.command.HeartbeatAgentUseCase
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto
+import com.bara.api.adapter.`in`.rest.a2a.JsonRpcRequest
+import com.bara.api.adapter.`in`.rest.a2a.JsonRpcResponse
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
+import com.bara.api.application.port.`in`.query.GetTaskQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,6 +28,7 @@ class AgentController(
     private val listAgentsQuery: ListAgentsQuery,
     private val getAgentQuery: GetAgentQuery,
     private val getAgentCardQuery: GetAgentCardQuery,
+    private val getTaskQuery: GetTaskQuery,
 ) {
 
     @PostMapping
@@ -85,15 +89,38 @@ class AgentController(
     fun sendMessage(
         @RequestHeader("X-User-Id") userId: String,
         @PathVariable agentName: String,
-        @RequestBody request: SendMessageApiRequest,
-    ): CompletableFuture<ResponseEntity<A2ATaskDto>> {
-        val text = request.message.parts.firstOrNull()?.text ?: ""
+        @RequestBody envelope: JsonRpcRequest<SendMessageParams>,
+    ): CompletableFuture<ResponseEntity<JsonRpcResponse<A2ATaskDto>>> {
+        val params = envelope.params
+            ?: throw IllegalArgumentException("JSON-RPC params is required")
+        val text = params.message.parts.firstOrNull()?.text ?: ""
         val sendRequest = SendMessageUseCase.SendMessageRequest(
-            messageId = request.message.messageId,
+            messageId = params.message.messageId,
             text = text,
-            contextId = request.contextId,
+            contextId = params.contextId,
         )
-        return sendMessageUseCase.sendBlocking(userId, agentName, sendRequest)
-            .thenApply { ResponseEntity.ok(it) }
+        val returnImmediately = params.configuration?.returnImmediately == true
+
+        return if (returnImmediately) {
+            val dto = sendMessageUseCase.sendAsync(userId, agentName, sendRequest)
+            CompletableFuture.completedFuture(
+                ResponseEntity.ok(JsonRpcResponse(id = envelope.id, result = dto)),
+            )
+        } else {
+            sendMessageUseCase.sendBlocking(userId, agentName, sendRequest)
+                .thenApply { dto ->
+                    ResponseEntity.ok(JsonRpcResponse(id = envelope.id, result = dto))
+                }
+        }
+    }
+
+    @GetMapping("/{agentName}/tasks/{taskId}")
+    fun getTask(
+        @RequestHeader("X-User-Id") userId: String,
+        @PathVariable agentName: String,
+        @PathVariable taskId: String,
+    ): ResponseEntity<JsonRpcResponse<A2ATaskDto>> {
+        val dto = getTaskQuery.getTask(userId = userId, taskId = taskId)
+        return ResponseEntity.ok(JsonRpcResponse(id = null, result = dto))
     }
 }

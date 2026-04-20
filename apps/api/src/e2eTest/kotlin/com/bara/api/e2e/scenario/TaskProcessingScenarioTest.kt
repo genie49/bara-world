@@ -100,17 +100,27 @@ class TaskProcessingScenarioTest : E2eTestBase() {
         userId: String,
         agentName: String,
         text: String,
+        returnImmediately: Boolean = false,
     ): org.springframework.http.ResponseEntity<Map<*, *>> {
         val headers = HttpHeaders().apply {
             contentType = MediaType.APPLICATION_JSON
             set("X-User-Id", userId)
         }
+        val config = if (returnImmediately) {
+            """, "configuration": { "returnImmediately": true }"""
+        } else {
+            ""
+        }
         val body = """
             {
-                "message": {
-                    "messageId": "${UUID.randomUUID()}",
-                    "role": "user",
-                    "parts": [{"kind": "text", "text": "$text"}]
+                "jsonrpc": "2.0",
+                "id": "req-${UUID.randomUUID()}",
+                "method": "message/send",
+                "params": {
+                    "message": {
+                        "messageId": "${UUID.randomUUID()}",
+                        "parts": [{"text": "$text"}]
+                    }$config
                 }
             }
         """.trimIndent()
@@ -119,6 +129,21 @@ class TaskProcessingScenarioTest : E2eTestBase() {
             url("/api/core/agents/$agentName/message:send"),
             HttpMethod.POST,
             HttpEntity(body, headers),
+            Map::class.java,
+        ) as org.springframework.http.ResponseEntity<Map<*, *>>
+    }
+
+    private fun getTask(
+        userId: String,
+        agentName: String,
+        taskId: String,
+    ): org.springframework.http.ResponseEntity<Map<*, *>> {
+        val headers = HttpHeaders().apply { set("X-User-Id", userId) }
+        @Suppress("UNCHECKED_CAST")
+        return http.exchange(
+            url("/api/core/agents/$agentName/tasks/$taskId"),
+            HttpMethod.GET,
+            HttpEntity<Void>(headers),
             Map::class.java,
         ) as org.springframework.http.ResponseEntity<Map<*, *>>
     }
@@ -137,10 +162,13 @@ class TaskProcessingScenarioTest : E2eTestBase() {
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
         val body = response.body!!
-        val status = body["status"] as Map<*, *>
+        assertThat(body["jsonrpc"]).isEqualTo("2.0")
+        assertThat(body["error"]).isNull()
+        val result = body["result"] as Map<*, *>
+        val status = result["status"] as Map<*, *>
         assertThat(status["state"]).isEqualTo("completed")
 
-        val artifacts = body["artifacts"] as List<*>
+        val artifacts = result["artifacts"] as List<*>
         assertThat(artifacts).hasSize(1)
         val artifact = artifacts[0] as Map<*, *>
         val parts = artifact["parts"] as List<*>
@@ -163,14 +191,13 @@ class TaskProcessingScenarioTest : E2eTestBase() {
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
         val body = response.body!!
-        val status = body["status"] as Map<*, *>
+        val result = body["result"] as Map<*, *>
+        val status = result["status"] as Map<*, *>
         assertThat(status["state"]).isEqualTo("failed")
-        // 현재 A2ATaskMapper는 errorCode/Message를 DTO에 포함하지 않음(Phase 2 작업).
-        // Mongo상의 task row가 FAILED로 저장됐는지는 Phase 2에서 확인.
     }
 
     @Test
-    fun `3 - Agent 침묵 - block-timeout-seconds 후 504 agent_timeout`() {
+    fun `3 - Agent 침묵 - block-timeout-seconds 후 504 agent_timeout envelope`() {
         val provider = "e2e-task-${UUID.randomUUID()}"
         val agentName = "silent-${UUID.randomUUID()}"
         val agentId = registerAgent(provider, agentName)
@@ -182,22 +209,24 @@ class TaskProcessingScenarioTest : E2eTestBase() {
         val elapsed = System.currentTimeMillis() - started
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.GATEWAY_TIMEOUT)
-        assertThat(response.body!!["error"]).isEqualTo("agent_timeout")
-        // block-timeout-seconds=15 이므로 대략 그 근처 (14-25초 여유).
+        val body = response.body!!
+        val error = body["error"] as Map<*, *>
+        assertThat((error["code"] as Number).toInt()).isEqualTo(-32063)
         assertThat(elapsed).isBetween(14_000L, 25_000L)
     }
 
     @Test
-    fun `4 - registry 생략하면 503 agent_unavailable`() {
+    fun `4 - registry 생략하면 503 agent_unavailable envelope`() {
         val provider = "e2e-task-${UUID.randomUUID()}"
         val agentName = "unreg-${UUID.randomUUID()}"
         registerAgent(provider, agentName)
-        // registry() 호출 생략 → Redis mapping 없음
 
         val response = sendMessage(userId = "user-4", agentName = agentName, text = "hi")
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
-        assertThat(response.body!!["error"]).isEqualTo("agent_unavailable")
+        val body = response.body!!
+        val error = body["error"] as Map<*, *>
+        assertThat((error["code"] as Number).toInt()).isEqualTo(-32062)
     }
 
     @Test
@@ -219,5 +248,91 @@ class TaskProcessingScenarioTest : E2eTestBase() {
         // MongoDB driver는 Integer로 반환하므로 Number로 받아 long 비교.
         val expireAfter = (expiredAtIndex!!["expireAfterSeconds"] as Number).toLong()
         assertThat(expireAfter).`as`("TTL expireAfterSeconds=0 이어야 함").isEqualTo(0L)
+    }
+
+    @Test
+    fun `6 - returnImmediately true - 즉시 200 + state=submitted envelope 반환`() {
+        val provider = "e2e-task-${UUID.randomUUID()}"
+        val agentName = "async-${UUID.randomUUID()}"
+        val agentId = registerAgent(provider, agentName)
+        registry(provider, agentName)
+        fakeAgent.onAgent(agentId, FakeAgentKafka.Behavior.completed("ignored"))
+
+        val started = System.currentTimeMillis()
+        val response = sendMessage(
+            userId = "user-6",
+            agentName = agentName,
+            text = "fire and forget",
+            returnImmediately = true,
+        )
+        val elapsed = System.currentTimeMillis() - started
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+        val body = response.body!!
+        val result = body["result"] as Map<*, *>
+        val status = result["status"] as Map<*, *>
+        assertThat(status["state"]).isEqualTo("submitted")
+        // Kafka publish ack (5s timeout) 내로 응답. Agent 처리 시간 대기 없음.
+        assertThat(elapsed).isLessThan(5_000L)
+    }
+
+    @Test
+    fun `7 - GET tasks taskId - Agent 완료 후 envelope result 반환`() {
+        val provider = "e2e-task-${UUID.randomUUID()}"
+        val agentName = "poll-${UUID.randomUUID()}"
+        val agentId = registerAgent(provider, agentName)
+        registry(provider, agentName)
+        fakeAgent.onAgent(agentId, FakeAgentKafka.Behavior.completed("polled"))
+
+        val sendRes = sendMessage(userId = "user-7", agentName = agentName, text = "poll me")
+        assertThat(sendRes.statusCode).isEqualTo(HttpStatus.OK)
+        val sent = sendRes.body!!["result"] as Map<*, *>
+        val taskId = sent["id"] as String
+
+        val getRes = getTask(userId = "user-7", agentName = agentName, taskId = taskId)
+        assertThat(getRes.statusCode).isEqualTo(HttpStatus.OK)
+        val body = getRes.body!!
+        assertThat(body["error"]).isNull()
+        val result = body["result"] as Map<*, *>
+        val status = result["status"] as Map<*, *>
+        assertThat(status["state"]).isEqualTo("completed")
+    }
+
+    @Test
+    fun `8 - GET tasks taskId - 존재하지 않는 taskId → 404 task_not_found envelope`() {
+        val provider = "e2e-task-${UUID.randomUUID()}"
+        val agentName = "missing-${UUID.randomUUID()}"
+        registerAgent(provider, agentName)
+        registry(provider, agentName)
+
+        val response = getTask(
+            userId = "user-8",
+            agentName = agentName,
+            taskId = "does-not-exist-${UUID.randomUUID()}",
+        )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+        val body = response.body!!
+        val error = body["error"] as Map<*, *>
+        assertThat((error["code"] as Number).toInt()).isEqualTo(-32064)
+    }
+
+    @Test
+    fun `9 - GET tasks taskId - 다른 userId 접근 → 403 task_access_denied envelope`() {
+        val provider = "e2e-task-${UUID.randomUUID()}"
+        val agentName = "owned-${UUID.randomUUID()}"
+        val agentId = registerAgent(provider, agentName)
+        registry(provider, agentName)
+        fakeAgent.onAgent(agentId, FakeAgentKafka.Behavior.completed("secret"))
+
+        val sendRes = sendMessage(userId = "owner-9", agentName = agentName, text = "private")
+        val taskId = (sendRes.body!!["result"] as Map<*, *>)["id"] as String
+
+        val response = getTask(userId = "attacker-9", agentName = agentName, taskId = taskId)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.FORBIDDEN)
+        val body = response.body!!
+        val error = body["error"] as Map<*, *>
+        assertThat((error["code"] as Number).toInt()).isEqualTo(-32065)
     }
 }

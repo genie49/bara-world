@@ -157,4 +157,84 @@ class SendMessageServiceTest {
         val ex = runCatching { future.get(1, TimeUnit.SECONDS) }.exceptionOrNull()
         assertTrue((ex as? ExecutionException)?.cause is AgentTimeoutException)
     }
+
+    @Test
+    fun `sendAsync — Kafka publish 성공 시 submitted 상태 DTO 즉시 반환`() {
+        every { agentRegistryPort.getAgentId("my-agent") } returns "agent-001"
+        val taskSlot = slot<Task>()
+        every { taskRepositoryPort.save(capture(taskSlot)) } answers { taskSlot.captured }
+        every { taskEventBusPort.publish(any(), any()) } returns "1-0"
+        justRun { taskPublisherPort.publish("agent-001", any<TaskMessagePayload>()) }
+
+        val dto = service.sendAsync(
+            userId = "user-1",
+            agentName = "my-agent",
+            request = request,
+        )
+
+        assertEquals("submitted", dto.status.state)
+        assertEquals(taskSlot.captured.id, dto.id)
+        assertEquals("c-1", dto.contextId)
+        verify(exactly = 0) { taskEventBusPort.await(any(), any()) }
+    }
+
+    @Test
+    fun `sendAsync — AgentRegistry 미등록 시 AgentUnavailableException`() {
+        every { agentRegistryPort.getAgentId("my-agent") } returns null
+
+        val ex = runCatching {
+            service.sendAsync(
+                userId = "user-1",
+                agentName = "my-agent",
+                request = request,
+            )
+        }.exceptionOrNull()
+        assertTrue(ex is AgentUnavailableException)
+        verify(exactly = 0) { taskRepositoryPort.save(any()) }
+        verify(exactly = 0) { taskPublisherPort.publish(any(), any()) }
+    }
+
+    @Test
+    fun `sendAsync — Kafka publish 실패 시 Task를 failed로 전환 후 KafkaPublishException 전파`() {
+        every { agentRegistryPort.getAgentId("my-agent") } returns "agent-001"
+        val taskSlot = slot<Task>()
+        every { taskRepositoryPort.save(capture(taskSlot)) } answers { taskSlot.captured }
+        every { taskRepositoryPort.updateState(
+            id = any(),
+            state = TaskState.FAILED,
+            statusMessage = null,
+            artifacts = emptyList(),
+            errorCode = "kafka-publish-failed",
+            errorMessage = any(),
+            updatedAt = any(),
+            completedAt = any(),
+            expiredAt = any(),
+        ) } returns true
+        every { taskEventBusPort.publish(any(), any()) } returns "1-0"
+        every {
+            taskPublisherPort.publish("agent-001", any<TaskMessagePayload>())
+        } throws KafkaPublishException("broker down")
+
+        val ex = runCatching {
+            service.sendAsync(
+                userId = "user-1",
+                agentName = "my-agent",
+                request = request,
+            )
+        }.exceptionOrNull()
+        assertTrue(ex is KafkaPublishException)
+        verify(exactly = 1) {
+            taskRepositoryPort.updateState(
+                id = any(),
+                state = TaskState.FAILED,
+                statusMessage = null,
+                artifacts = emptyList(),
+                errorCode = "kafka-publish-failed",
+                errorMessage = any(),
+                updatedAt = any(),
+                completedAt = any(),
+                expiredAt = any(),
+            )
+        }
+    }
 }
