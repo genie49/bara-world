@@ -40,7 +40,7 @@ class RedisStreamTaskEventBus(
     override fun subscribe(
         taskId: String,
         fromStreamId: String,
-        listener: (TaskEvent) -> Unit,
+        listener: (entryId: String, event: TaskEvent) -> Unit,
     ): Subscription = EventBusPoller(
         redisTemplate = redisTemplate,
         objectMapper = objectMapper,
@@ -52,7 +52,7 @@ class RedisStreamTaskEventBus(
 
     override fun await(taskId: String, timeout: Duration): CompletableFuture<TaskEvent> {
         val future = CompletableFuture<TaskEvent>()
-        val subscription = subscribe(taskId, "0") { event ->
+        val subscription = subscribe(taskId, "0") { _, event ->
             if (event.final && !future.isDone) {
                 future.complete(event)
             }
@@ -76,6 +76,9 @@ class RedisStreamTaskEventBus(
         redisTemplate.expire(key, grace)
         logger.debug("Scheduled stream close key={} after={}s", key, grace.seconds)
     }
+
+    override fun streamExists(taskId: String): Boolean =
+        redisTemplate.hasKey(streamKey(taskId))
 
     @PreDestroy
     fun shutdown() {

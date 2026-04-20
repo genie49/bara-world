@@ -6,6 +6,7 @@ import com.bara.api.domain.exception.A2AErrorCodes
 import com.bara.api.domain.exception.A2AException
 import com.bara.common.logging.WideEvent
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -22,13 +23,15 @@ class A2AExceptionHandler {
         WideEvent.put("outcome", outcome)
         WideEvent.message("A2A 예외: ${ex.message}")
 
-        return ResponseEntity.status(httpStatus).body(
-            JsonRpcResponse(
-                id = null,
-                result = null,
-                error = JsonRpcError(code = ex.code, message = ex.message ?: "A2A error"),
-            ),
-        )
+        return ResponseEntity.status(httpStatus)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(
+                JsonRpcResponse(
+                    id = null,
+                    result = null,
+                    error = JsonRpcError(code = ex.code, message = ex.message ?: "A2A error"),
+                ),
+            )
     }
 
     private fun httpFor(code: Int): HttpStatus = when (code) {
@@ -37,6 +40,7 @@ class A2AExceptionHandler {
         A2AErrorCodes.AGENT_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT
         A2AErrorCodes.TASK_NOT_FOUND -> HttpStatus.NOT_FOUND
         A2AErrorCodes.TASK_ACCESS_DENIED -> HttpStatus.FORBIDDEN
+        A2AErrorCodes.STREAM_UNSUPPORTED -> HttpStatus.GONE
         else -> HttpStatus.INTERNAL_SERVER_ERROR
     }
 
@@ -46,6 +50,7 @@ class A2AExceptionHandler {
         A2AErrorCodes.AGENT_TIMEOUT -> "agent_timeout"
         A2AErrorCodes.TASK_NOT_FOUND -> "task_not_found"
         A2AErrorCodes.TASK_ACCESS_DENIED -> "task_access_denied"
+        A2AErrorCodes.STREAM_UNSUPPORTED -> "stream_expired"
         else -> "a2a_error"
     }
 }

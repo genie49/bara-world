@@ -21,4 +21,5 @@ object A2AErrorCodes {
     const val AGENT_TIMEOUT = -32063
     const val TASK_NOT_FOUND = -32064
     const val TASK_ACCESS_DENIED = -32065
+    const val STREAM_UNSUPPORTED = -32067
 }

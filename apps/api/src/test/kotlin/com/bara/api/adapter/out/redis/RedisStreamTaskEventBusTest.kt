@@ -53,6 +53,17 @@ class RedisStreamTaskEventBusTest {
     }
 
     @Test
+    fun `streamExists 는 hasKey 결과를 그대로 반환한다`() {
+        every { redisTemplate.hasKey("stream:task:t-1") } returns true
+        every { redisTemplate.hasKey("stream:task:t-gone") } returns false
+
+        val bus = newBus()
+
+        assertEquals(true, bus.streamExists("t-1"))
+        assertEquals(false, bus.streamExists("t-gone"))
+    }
+
+    @Test
     fun `close는 stream task 키에 grace period로 expire 를 건다`() {
         every { redisTemplate.expire("stream:task:t-1", Duration.ofSeconds(60)) } returns true
 

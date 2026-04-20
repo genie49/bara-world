@@ -8,13 +8,17 @@ import com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto
 import com.bara.api.adapter.`in`.rest.a2a.JsonRpcRequest
 import com.bara.api.adapter.`in`.rest.a2a.JsonRpcResponse
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
+import com.bara.api.application.port.`in`.command.StreamMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.GetTaskQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
+import com.bara.api.application.port.`in`.query.SubscribeTaskQuery
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.util.concurrent.CompletableFuture
 
 @RestController
@@ -25,10 +29,12 @@ class AgentController(
     private val registryAgentUseCase: RegistryAgentUseCase,
     private val heartbeatAgentUseCase: HeartbeatAgentUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
+    private val streamMessageUseCase: StreamMessageUseCase,
     private val listAgentsQuery: ListAgentsQuery,
     private val getAgentQuery: GetAgentQuery,
     private val getAgentCardQuery: GetAgentCardQuery,
     private val getTaskQuery: GetTaskQuery,
+    private val subscribeTaskQuery: SubscribeTaskQuery,
 ) {
 
     @PostMapping
@@ -114,6 +120,23 @@ class AgentController(
         }
     }
 
+    @PostMapping("/{agentName}/message:stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun sendMessageStream(
+        @RequestHeader("X-User-Id") userId: String,
+        @PathVariable agentName: String,
+        @RequestBody envelope: JsonRpcRequest<SendMessageParams>,
+    ): SseEmitter {
+        val params = envelope.params
+            ?: throw IllegalArgumentException("JSON-RPC params is required")
+        val text = params.message.parts.firstOrNull()?.text ?: ""
+        val sendRequest = SendMessageUseCase.SendMessageRequest(
+            messageId = params.message.messageId,
+            text = text,
+            contextId = params.contextId,
+        )
+        return streamMessageUseCase.stream(userId, agentName, envelope.id, sendRequest)
+    }
+
     @GetMapping("/{agentName}/tasks/{taskId}")
     fun getTask(
         @RequestHeader("X-User-Id") userId: String,
@@ -123,4 +146,12 @@ class AgentController(
         val dto = getTaskQuery.getTask(userId = userId, taskId = taskId)
         return ResponseEntity.ok(JsonRpcResponse(id = null, result = dto))
     }
+
+    @GetMapping("/{agentName}/tasks/{taskId}:subscribe", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun subscribeTask(
+        @RequestHeader("X-User-Id") userId: String,
+        @RequestHeader(value = "Last-Event-ID", required = false) lastEventId: String?,
+        @PathVariable agentName: String,
+        @PathVariable taskId: String,
+    ): SseEmitter = subscribeTaskQuery.subscribe(userId, taskId, lastEventId)
 }
