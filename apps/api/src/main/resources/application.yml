@@ -56,3 +56,5 @@ bara:
       kafka-publish-timeout-seconds: 5
       stream-grace-period-seconds: 60
       mongo-ttl-days: 7
+      emitter-timeout-ms: 1800000 # 30분
+      heartbeat-interval-ms: 15000 # 15초

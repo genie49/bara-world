@@ -8,4 +8,6 @@ data class TaskProperties(
     val kafkaPublishTimeoutSeconds: Long = 5,
     val streamGracePeriodSeconds: Long = 60,
     val mongoTtlDays: Long = 7,
+    val emitterTimeoutMs: Long = 30 * 60 * 1000, // 30분
+    val heartbeatIntervalMs: Long = 15 * 1000, // 15초
 )
