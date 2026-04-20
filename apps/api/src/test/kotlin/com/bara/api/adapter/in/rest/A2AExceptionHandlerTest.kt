@@ -5,6 +5,7 @@ import com.bara.api.domain.exception.A2AException
 import com.bara.api.domain.exception.AgentTimeoutException
 import com.bara.api.domain.exception.AgentUnavailableException
 import com.bara.api.domain.exception.KafkaPublishException
+import com.bara.api.domain.exception.StreamUnsupportedException
 import com.bara.api.domain.exception.TaskAccessDeniedException
 import com.bara.api.domain.exception.TaskNotFoundException
 import org.junit.jupiter.api.Test
@@ -31,6 +32,7 @@ class A2AExceptionTestController {
         A2AErrorCodes.KAFKA_PUBLISH_FAILED -> throw KafkaPublishException("broker down")
         A2AErrorCodes.TASK_NOT_FOUND -> throw TaskNotFoundException("task-missing")
         A2AErrorCodes.TASK_ACCESS_DENIED -> throw TaskAccessDeniedException("task-other")
+        A2AErrorCodes.STREAM_UNSUPPORTED -> throw StreamUnsupportedException()
         else -> throw A2AException(code = code, message = "unknown")
     }
 }
@@ -98,6 +100,15 @@ class A2AExceptionHandlerTest {
             status { isForbidden() }
             jsonPath("$.error.code") { value(A2AErrorCodes.TASK_ACCESS_DENIED) }
             jsonPath("$.error.message") { value("Task access denied: task-other") }
+        }
+    }
+
+    @Test
+    fun `StreamUnsupportedException → 410 + code=-32067`() {
+        mockMvc.get("/__test/a2a/throw/${A2AErrorCodes.STREAM_UNSUPPORTED}").andExpect {
+            status { isGone() }
+            jsonPath("$.error.code") { value(A2AErrorCodes.STREAM_UNSUPPORTED) }
+            jsonPath("$.error.message") { value("Task stream is no longer available") }
         }
     }
 }

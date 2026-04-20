@@ -37,6 +37,7 @@ class A2AExceptionHandler {
         A2AErrorCodes.AGENT_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT
         A2AErrorCodes.TASK_NOT_FOUND -> HttpStatus.NOT_FOUND
         A2AErrorCodes.TASK_ACCESS_DENIED -> HttpStatus.FORBIDDEN
+        A2AErrorCodes.STREAM_UNSUPPORTED -> HttpStatus.GONE
         else -> HttpStatus.INTERNAL_SERVER_ERROR
     }
 
@@ -46,6 +47,7 @@ class A2AExceptionHandler {
         A2AErrorCodes.AGENT_TIMEOUT -> "agent_timeout"
         A2AErrorCodes.TASK_NOT_FOUND -> "task_not_found"
         A2AErrorCodes.TASK_ACCESS_DENIED -> "task_access_denied"
+        A2AErrorCodes.STREAM_UNSUPPORTED -> "stream_expired"
         else -> "a2a_error"
     }
 }
