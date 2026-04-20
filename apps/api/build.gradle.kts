@@ -33,6 +33,9 @@ configurations[e2eTestSourceSet.runtimeOnlyConfigurationName]
 
 dependencies {
     "e2eTestImplementation"(project(":libs:common-test"))
+    // e2eTest 에서 SSE 클라이언트 사용
+    "e2eTestImplementation"(libs.okhttp)
+    "e2eTestImplementation"(libs.okhttp.sse)
 }
 
 tasks.register<Test>("e2eTest") {
