@@ -10,6 +10,7 @@ import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.application.port.out.TaskRepositoryPort
 import com.bara.api.config.TaskProperties
 import com.bara.api.domain.exception.AgentUnavailableException
+import com.bara.api.adapter.`in`.rest.a2a.A2ATaskDto
 import com.bara.api.domain.exception.KafkaPublishException
 import com.bara.api.domain.model.Task
 import com.bara.api.domain.model.TaskEvent
@@ -21,6 +22,9 @@ import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifyOrder
 import org.junit.jupiter.api.Test
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.time.Instant
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -132,6 +136,78 @@ class StreamMessageServiceTest {
                 any(),
                 match<TaskEvent> { it.state == TaskState.FAILED && it.final },
             )
+        }
+    }
+
+    @Test
+    fun `subscribe listener 가 TaskEvent 를 받으면 SseBridge send 로 전달 (final flag 포함)`() {
+        every { agentRegistryPort.getAgentId("my-agent") } returns "agent-001"
+        val taskSlot = slot<Task>()
+        every { taskRepositoryPort.save(capture(taskSlot)) } answers { taskSlot.captured }
+        every { taskEventBusPort.publish(any(), any()) } returns "1-0"
+        val subscription = mockk<Subscription>(relaxed = true)
+        val listenerSlot = slot<(TaskEvent) -> Unit>()
+        every {
+            taskEventBusPort.subscribe(any(), "0", capture(listenerSlot))
+        } returns subscription
+        justRun { taskPublisherPort.publish("agent-001", any<TaskMessagePayload>()) }
+
+        service.stream("user-1", "my-agent", null, request)
+
+        val capturedTaskId = taskSlot.captured.id
+        val capturedContextId = taskSlot.captured.contextId
+
+        // 캡처된 listener 를 synthetic TaskEvent 로 직접 호출하여
+        // SseBridge.send(taskId, "0", dto, final) 로 포워딩되는지 검증한다.
+        val finalEvent = TaskEvent(
+            taskId = capturedTaskId,
+            contextId = capturedContextId,
+            state = TaskState.COMPLETED,
+            statusMessage = null,
+            artifact = null,
+            errorCode = null,
+            errorMessage = null,
+            final = true,
+            timestamp = Instant.now(),
+        )
+        listenerSlot.captured.invoke(finalEvent)
+
+        verify(exactly = 1) {
+            sseBridge.send(capturedTaskId, "0", any<A2ATaskDto>(), true)
+        }
+    }
+
+    @Test
+    fun `Kafka publish 실패 시 emitter 를 completeWithError 로 종료한다 (bridge release trigger)`() {
+        every { agentRegistryPort.getAgentId("my-agent") } returns "agent-001"
+        val taskSlot = slot<Task>()
+        every { taskRepositoryPort.save(capture(taskSlot)) } answers { taskSlot.captured }
+        every { taskEventBusPort.publish(any(), any()) } returns "1-0"
+        val subscription = mockk<Subscription>(relaxed = true)
+        every { taskEventBusPort.subscribe(any(), "0", any()) } returns subscription
+        every {
+            taskRepositoryPort.updateState(
+                id = any(), state = TaskState.FAILED,
+                statusMessage = null, artifacts = emptyList(),
+                errorCode = "kafka-publish-failed", errorMessage = any(),
+                updatedAt = any(), completedAt = any(), expiredAt = any(),
+            )
+        } returns true
+        val emitterSlot = slot<SseEmitter>()
+        justRun { sseBridge.attach(any(), any(), capture(emitterSlot), any()) }
+        every {
+            taskPublisherPort.publish("agent-001", any<TaskMessagePayload>())
+        } throws KafkaPublishException("broker down")
+
+        val ex = runCatching {
+            service.stream("user-1", "my-agent", null, request)
+        }.exceptionOrNull()
+        assertTrue(ex is KafkaPublishException, "Expected KafkaPublishException but was $ex")
+
+        // completeWithError 이후에는 emitter 가 이미 종료 상태이므로 send 시 IllegalStateException 이 발생한다.
+        assertTrue(emitterSlot.isCaptured, "Emitter should have been captured via sseBridge.attach")
+        assertFailsWith<IllegalStateException> {
+            emitterSlot.captured.send(SseEmitter.event().comment("post-check"))
         }
     }
 }

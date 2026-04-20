@@ -105,6 +105,9 @@ class StreamMessageService(
             )
         } catch (e: KafkaPublishException) {
             markFailed(task, "kafka-publish-failed", e.message ?: "Kafka publish failed")
+            // emitter 에 에러를 전파하여 SseBridge.attach 가 걸어둔 onError 콜백 → release() 를 트리거한다.
+            // 이렇게 해야 활성 emitter 맵에서 제거되고 subscription.close() 도 호출되어 leak 을 막을 수 있다.
+            emitter.completeWithError(e)
             WideEvent.put("task_id", taskId)
             WideEvent.put("agent_name", agentName)
             WideEvent.put("user_id", userId)
