@@ -10,10 +10,12 @@ import com.bara.api.application.port.`in`.command.RegisterAgentCommand
 import com.bara.api.application.port.`in`.command.RegisterAgentUseCase
 import com.bara.api.application.port.`in`.command.RegistryAgentUseCase
 import com.bara.api.application.port.`in`.command.SendMessageUseCase
+import com.bara.api.application.port.`in`.command.StreamMessageUseCase
 import com.bara.api.application.port.`in`.query.GetAgentCardQuery
 import com.bara.api.application.port.`in`.query.GetAgentQuery
 import com.bara.api.application.port.`in`.query.GetTaskQuery
 import com.bara.api.application.port.`in`.query.ListAgentsQuery
+import com.bara.api.application.port.`in`.query.SubscribeTaskQuery
 import com.bara.api.application.port.out.TaskPublisherPort
 import com.bara.api.domain.exception.A2AErrorCodes
 import com.bara.api.domain.exception.AgentNameAlreadyExistsException
@@ -89,6 +91,12 @@ class AgentControllerTest {
 
     @MockkBean
     lateinit var sendMessageUseCase: SendMessageUseCase
+
+    @MockkBean
+    lateinit var streamMessageUseCase: StreamMessageUseCase
+
+    @MockkBean
+    lateinit var subscribeTaskQuery: SubscribeTaskQuery
 
     @MockkBean
     lateinit var taskPublisherPort: TaskPublisherPort
